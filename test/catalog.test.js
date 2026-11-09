@@ -93,6 +93,9 @@ try {
   });
   assert.deepStrictEqual(prefs.favorites, ["bundle:Motion/Camera Shake.ffx"]);
   assert.strictEqual(prefs.section, "home");
+  assert.strictEqual(prefs.viewMode, "grid");
+  assert.strictEqual(preferences.normalize({ section: "tools", viewMode: "list" }).section, "tools");
+  assert.deepStrictEqual(preferences.replaceId(["myfile:C:/old.ffx"], "myfile:C:/old.ffx", "myfile:C:/new.ffx"), ["myfile:C:/new.ffx"]);
   assert.strictEqual(prefs.myPresetFiles.length, 1);
   const roundTrip = preferences.normalize(JSON.parse(preferences.serialize(prefs)));
   assert.deepStrictEqual(roundTrip.favorites, prefs.favorites);

@@ -7,6 +7,7 @@
     ["categories", "Categories", "M2.5 2.5h4.2v4.2H2.5Zm6.8 0H13.5v4.2H9.3ZM2.5 9.3h4.2V13.5H2.5Zm6.8 0H13.5V13.5H9.3Z"],
     ["favorites", "Favorites", "M8 2.2 9.6 5.7l3.8.4-2.8 2.6.8 3.8L8 10.7 4.6 12.5l.8-3.8L2.6 6.1l3.8-.4Z"],
     ["my", "My Presets", "M2.2 4.2h4l1.2 1.3H13.8V12.8H2.2Z"],
+    ["tools", "Tools", "M2.5 8h11M8 2.5v11M4 4l8 8M12 4l-8 8"],
     ["settings", "Settings", "M3 4.5h10M3 8h10M3 11.5h10M6 3.2v2.6M10 6.7v2.6M7.5 10.2v2.6"]
   ];
   var previewCache = {};
@@ -68,60 +69,186 @@
     return previewCache[preset.previewPath];
   }
 
-  function presetCard(preset, state) {
-    var selected = RR.preferences.contains(state.prefs.selected, preset.id);
-    var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
-    var thumb = el("div", { class: "thumb" });
-    var url = previewUrl(preset);
-    if (url) thumb.style.backgroundImage = "url(\"" + url.replace(/"/g, "") + "\")";
-    var body = el("div", {}, [
-      el("header", {}, [
-        el("h2", { text: preset.name }),
-        el("button", {
-          class: "star",
-          type: "button",
-          "data-action": "toggle-favorite",
-          "data-id": preset.id,
-          "aria-pressed": favorite ? "true" : "false",
-          "aria-label": favorite ? "Remove favorite" : "Add favorite",
-          text: favorite ? "★" : "☆"
-        })
-      ]),
-      el("div", { class: "faint", text: preset.category + (preset.source === "my" ? " · My Presets" : preset.source === "myfile" ? " · Added file" : "") }),
-      preset.description ? el("p", { class: "desc", text: preset.description }) : null,
-      el("div", { class: "file", text: preset.relativePath }),
-      el("div", { class: "actions" }, [
-        el("button", {
-          type: "button",
-          "data-action": "toggle-select",
-          "data-id": preset.id,
-          "aria-pressed": selected ? "true" : "false",
-          disabled: state.busy ? "disabled" : null,
-          text: selected ? "Selected" : "Select"
-        }),
-        el("button", {
-          type: "button",
-          "data-action": "apply-one",
-          "data-id": preset.id,
-          disabled: state.busy ? "disabled" : null,
-          text: "Apply"
-        }),
-        preset.source === "myfile" ? el("button", {
-          type: "button",
-          "data-action": "remove-file",
-          "data-id": preset.id,
-          text: "Remove"
-        }) : null
-      ])
-    ]);
-    return el("article", { class: "card" + (selected ? " selected" : "") }, [thumb, body]);
+  function monogram(name) {
+    var parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "FX";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+  }
+
+  function hue(text) {
+    var n = 0;
+    var i;
+    for (i = 0; i < text.length; i++) n = (n + text.charCodeAt(i) * (i + 1)) % 36;
+    return 258 + n;
+  }
+
+  function formatSize(bytes) {
+    if (!bytes) return "0 B";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1048576).toFixed(1) + " MB";
+  }
+
+  function sourceLabel(preset) {
+    if (preset.source === "my") return "Folder";
+    if (preset.source === "myfile") return "Added file";
+    return "Library";
+  }
+
+  function layerCount(state) {
+    var payload = state.host && state.host.payload;
+    if (!payload || !payload.selectedLayers) return 0;
+    return payload.selectedLayers.length;
+  }
+
+  function pagePresets(state) {
+    if (state.section === "presets") {
+      return state.catalog.presets.filter(function (preset) { return preset.source === "bundle"; });
+    }
+    if (state.section === "my") {
+      return state.catalog.presets.filter(function (preset) {
+        return preset.source === "my" || preset.source === "myfile";
+      });
+    }
+    if (state.section === "favorites") {
+      var known = knownMap(state.catalog.presets);
+      return state.prefs.favorites.map(function (id) { return known[id]; }).filter(Boolean);
+    }
+    return state.catalog.presets.slice();
+  }
+
+  function filteredPresets(state, presets) {
+    var query = String(state.query || "").trim().toLowerCase();
+    return presets.filter(function (preset) {
+      if (state.favoritesOnly && !RR.preferences.contains(state.prefs.favorites, preset.id)) return false;
+      if (state.categoryFilter && preset.category !== state.categoryFilter) return false;
+      if (!query) return true;
+      var hay = (preset.name + " " + preset.category + " " + preset.filePath).toLowerCase();
+      return hay.indexOf(query) !== -1;
+    });
+  }
+
+  function stat(value, label) {
+    return el("div", { class: "stat" }, [el("b", { text: String(value) }), el("span", { text: label })]);
   }
 
   function emptyState(title, copy) {
-    return el("section", { class: "empty" }, [
-      el("h2", { text: title }),
-      el("p", { text: copy })
+    return el("section", { class: "empty" }, [el("h2", { text: title }), el("p", { text: copy })]);
+  }
+
+  function presetCard(preset, state) {
+    var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
+    var active = state.detailId === preset.id;
+    var thumb = el("div", { class: "thumb", text: monogram(preset.name) });
+    var url = previewUrl(preset);
+    if (url) {
+      thumb.style.backgroundImage = "url(\"" + url.replace(/"/g, "") + "\")";
+      thumb.textContent = "";
+    } else {
+      var tone = hue(preset.category || preset.name);
+      thumb.style.background = "linear-gradient(160deg, hsl(" + tone + ", 70%, 62%), hsl(" + ((tone + 24) % 360) + ", 55%, 28%))";
+    }
+    var copy = el("div", { class: "card-copy" }, [
+      el("h2", { text: preset.name }),
+      el("div", { class: "card-meta", text: sourceLabel(preset) + " · " + preset.category })
     ]);
+    var apply = el("button", {
+      type: "button",
+      "data-action": "apply-one",
+      "data-id": preset.id,
+      disabled: state.busy ? "disabled" : null,
+      text: "Apply"
+    });
+    var star = el("button", {
+      class: "star",
+      type: "button",
+      "data-action": "toggle-favorite",
+      "data-id": preset.id,
+      "aria-pressed": favorite ? "true" : "false",
+      "aria-label": favorite ? "Remove favorite" : "Add favorite",
+      text: favorite ? "★" : "☆"
+    });
+    return el("article", {
+      class: "preset-card" + (active ? " active" : ""),
+      "data-action": "inspect",
+      "data-id": preset.id
+    }, [thumb, copy, apply, star]);
+  }
+
+  function toolbar(state, presets) {
+    var categories = [];
+    presets.forEach(function (preset) {
+      if (categories.indexOf(preset.category) === -1) categories.push(preset.category);
+    });
+    categories.sort(function (a, b) { return a.localeCompare(b); });
+    var select = el("select", { id: "category-filter", "aria-label": "Category" }, [
+      el("option", { value: "", text: "All categories" })
+    ]);
+    categories.forEach(function (category) {
+      var option = el("option", { value: category, text: category });
+      if (category === state.categoryFilter) option.selected = true;
+      select.appendChild(option);
+    });
+    var search = el("input", {
+      id: "preset-search",
+      class: "search",
+      type: "search",
+      placeholder: "Search presets",
+      value: state.query || ""
+    });
+    var nodes = [
+      search,
+      select,
+      el("button", {
+        type: "button",
+        "data-action": "toggle-fav-filter",
+        "aria-pressed": state.favoritesOnly ? "true" : "false",
+        text: "Favorites"
+      }),
+      el("button", {
+        type: "button",
+        "data-action": "set-view",
+        "data-mode": "grid",
+        "aria-pressed": state.prefs.viewMode === "list" ? "false" : "true",
+        text: "Grid"
+      }),
+      el("button", {
+        type: "button",
+        "data-action": "set-view",
+        "data-mode": "list",
+        "aria-pressed": state.prefs.viewMode === "list" ? "true" : "false",
+        text: "List"
+      })
+    ];
+    return el("div", { class: "toolbar" }, nodes);
+  }
+
+  function presetBrowser(state, title, subtitle, presets, emptyTitle, emptyCopy, extra) {
+    var shown = filteredPresets(state, presets);
+    var categories = {};
+    presets.forEach(function (preset) { categories[preset.category] = true; });
+    var favoriteCount = presets.filter(function (preset) {
+      return RR.preferences.contains(state.prefs.favorites, preset.id);
+    }).length;
+    var nodes = [
+      el("div", { class: "page-head" }, [el("h1", { text: title }), el("p", { text: subtitle })]),
+      el("div", { class: "stats" }, [
+        stat(presets.length, "Presets"),
+        stat(favoriteCount, "Favorites"),
+        stat(Object.keys(categories).length, "Categories"),
+        stat(layerCount(state), "Selected layers")
+      ]),
+      extra || null,
+      toolbar(state, presets)
+    ];
+    if (!shown.length) nodes.push(emptyState(emptyTitle, emptyCopy));
+    else {
+      var grid = el("div", { class: state.prefs.viewMode === "list" ? "preset-list" : "preset-grid" });
+      shown.forEach(function (preset) { grid.appendChild(presetCard(preset, state)); });
+      nodes.push(grid);
+    }
+    return nodes;
   }
 
   function hostCard(state) {
@@ -165,21 +292,7 @@
   }
 
   function renderHome(state) {
-    var presets = state.catalog.presets;
-    var known = knownMap(presets);
-    var favoriteCount = state.prefs.favorites.filter(function (id) { return !!known[id]; }).length;
-    var selectedCount = state.prefs.selected.filter(function (id) { return !!known[id]; }).length;
-    var categories = {};
-    presets.forEach(function (preset) { categories[preset.category] = true; });
-    var nodes = [
-      hostCard(state),
-      el("div", { class: "stats" }, [
-        stat(presets.length, "Presets"),
-        stat(Object.keys(categories).length, "Categories"),
-        stat(favoriteCount, "Favorites"),
-        stat(selectedCount, "Selected")
-      ])
-    ];
+    var nodes = [hostCard(state)];
     if (state.catalog.warnings.length) {
       nodes.push(el("section", { class: "empty" }, state.catalog.warnings.map(function (warning) {
         return el("p", { class: "warn", text: warning });
@@ -189,55 +302,41 @@
       el("button", { type: "button", "data-action": "apply-selected", disabled: state.busy ? "disabled" : null, text: "Apply selected" }),
       el("button", { type: "button", "data-action": "rescan", text: "Rescan" })
     ]));
-    if (!presets.length) {
-      nodes.push(emptyState("No presets yet", "The catalog is empty because presets/ has no .ffx files. Add real After Effects animation presets and rescan. RR TOOLS does not ship sample presets."));
-    }
-    return nodes;
+    return nodes.concat(presetBrowser(
+      state,
+      "Home",
+      "Presets found on this computer. Counts come from the scan and the live After Effects selection.",
+      state.catalog.presets,
+      "No presets yet",
+      "The library folder has no .ffx files. Add files from My Presets. RR TOOLS does not ship sample presets."
+    ).slice(1));
   }
 
-  function stat(value, label) {
-    return el("div", { class: "stat" }, [el("b", { text: String(value) }), el("span", { text: label })]);
-  }
-
-  function renderPresetList(state, source, emptyTitle, emptyCopy) {
-    var presets = state.catalog.presets.filter(function (preset) {
-      if (source === "my") return preset.source === "my" || preset.source === "myfile";
-      return preset.source === source;
-    });
-    var nodes = [listHead(state, source === "my" ? "My Presets" : "Presets", presets.length)];
-    if (source === "my") {
-      var added = state.prefs.myPresetFiles && state.prefs.myPresetFiles.length;
-      nodes.push(el("div", { class: "row-actions" }, [
-        el("button", { type: "button", "data-action": "add-files", text: "Add .ffx files" }),
-        el("button", { type: "button", "data-action": "choose-my", text: state.paths.my ? "Change folder" : "Choose folder" }),
-        state.paths.my ? el("button", { type: "button", "data-action": "clear-my", text: "Clear folder" }) : null,
-        added ? el("button", { type: "button", "data-action": "clear-files", text: "Clear added files" }) : null
-      ]));
-    }
-    if (!presets.length) nodes.push(emptyState(emptyTitle, emptyCopy));
-    presets.forEach(function (preset) { nodes.push(presetCard(preset, state)); });
-    return nodes;
-  }
-
-  function listHead(state, title, count) {
-    return el("div", { class: "section-head" }, [
-      el("h1", { text: title }),
-      el("span", { class: "meta", text: String(count) }),
-      el("button", { type: "button", "data-action": "rescan", text: "Rescan" })
+  function myActions(state) {
+    var added = state.prefs.myPresetFiles && state.prefs.myPresetFiles.length;
+    return el("div", { class: "row-actions" }, [
+      el("button", { type: "button", "data-action": "add-files", text: "Add .ffx files" }),
+      el("button", { type: "button", "data-action": "choose-my", text: state.paths.my ? "Change folder" : "Add folder" }),
+      el("button", { type: "button", "data-action": "rescan", text: "Rescan" }),
+      state.paths.my ? el("button", { type: "button", "data-action": "clear-my", text: "Clear folder" }) : null,
+      added ? el("button", { type: "button", "data-action": "clear-files", text: "Clear added files" }) : null
     ]);
   }
 
   function renderCategories(state) {
     var groups = RR.catalog.groupByCategory(state.catalog.presets);
-    var nodes = [el("div", { class: "section-head" }, [el("h1", { text: "Categories" }), el("span", { class: "meta", text: String(groups.length) })])];
+    var nodes = [el("div", { class: "page-head" }, [
+      el("h1", { text: "Categories" }),
+      el("p", { text: groups.length + " categories from the scanned .ffx files." })
+    ])];
     if (!groups.length) {
-      nodes.push(emptyState("No categories", "Categories appear when .ffx files are found. A file in a subfolder uses that folder name. Files at the root of the presets folder use General."));
+      nodes.push(emptyState("No categories", "Categories appear when .ffx files are found. A file in a subfolder uses that folder name. Files at the root use General."));
       return nodes;
     }
     groups.forEach(function (group) {
       var ids = group.presets.map(function (preset) { return preset.id; });
       var allSelected = ids.every(function (id) { return RR.preferences.contains(state.prefs.selected, id); });
-      nodes.push(el("section", { class: "empty" }, [
+      nodes.push(el("section", { class: "group-card" }, [
         el("h2", { text: group.category }),
         el("p", { class: "muted", text: group.presets.length + " preset" + (group.presets.length === 1 ? "" : "s") }),
         el("div", { class: "actions" }, [
@@ -261,21 +360,32 @@
     return nodes;
   }
 
-  function renderFavorites(state) {
-    var known = knownMap(state.catalog.presets);
-    var presets = state.prefs.favorites.map(function (id) { return known[id]; }).filter(Boolean);
-    var nodes = [el("div", { class: "section-head" }, [el("h1", { text: "Favorites" }), el("span", { class: "meta", text: String(presets.length) })])];
-    if (!presets.length) nodes.push(emptyState("No favorites", "Star a preset to keep it here. Favorites are stored in the per-user preferences file on this computer."));
-    presets.forEach(function (preset) { nodes.push(presetCard(preset, state)); });
-    return nodes;
-  }
-
   function pathRow(label, value, action, actionLabel) {
     return el("section", { class: "path-row" }, [
       el("span", { class: "faint", text: label }),
       el("code", { text: value || "Not set" }),
       action ? el("div", { class: "actions" }, [el("button", { type: "button", "data-action": action, text: actionLabel })]) : null
     ]);
+  }
+
+  function renderTools(state) {
+    var version = state.host && state.host.payload ? state.host.payload.version : "";
+    return [
+      el("div", { class: "page-head" }, [
+        el("h1", { text: "Tools" }),
+        el("p", { text: "Actions that talk to After Effects or to the files this panel already uses." })
+      ]),
+      hostCard(state),
+      el("div", { class: "row-actions" }, [
+        el("button", { type: "button", "data-action": "rescan", text: "Rescan" }),
+        el("button", { type: "button", "data-action": "reveal-extension", text: "Reveal extension" }),
+        el("button", { type: "button", "data-action": "reveal-presets", text: "Reveal presets" }),
+        el("button", { type: "button", "data-action": "reveal-my", text: "Reveal My Presets" }),
+        el("button", { type: "button", "data-action": "reveal-prefs", text: "Reveal preferences" }),
+        el("button", { type: "button", "data-action": "reset-prefs", text: "Reset preferences" })
+      ]),
+      el("p", { class: "faint", text: version ? "Host version " + version + "." : "Host version appears after After Effects answers." })
+    ];
   }
 
   function renderSettings(state) {
@@ -288,7 +398,7 @@
       missing: "The folder was not found. The catalog stays empty until it exists."
     }[state.paths.presetsReason] || "";
     var nodes = [
-      el("div", { class: "section-head" }, [el("h1", { text: "Settings" })]),
+      el("div", { class: "page-head" }, [el("h1", { text: "Settings" }), el("p", { text: "Folders and the preferences file for this Windows user." })]),
       pathRow("Extension", state.paths.extension, "reveal-extension", "Reveal"),
       pathRow("Presets", state.paths.presets, "reveal-presets", "Reveal"),
       el("p", { class: "muted", text: reason }),
@@ -313,7 +423,7 @@
         el("button", { type: "button", "data-action": "remove-missing", text: "Remove missing ids" })
       ]));
     }
-    nodes.push(el("p", { class: "faint", text: "Apply calls After Effects through ExtendScript. A successful apply is reported only when the host returns APPLIED. This panel cannot verify that result outside After Effects." }));
+    nodes.push(el("p", { class: "faint", text: "Apply calls After Effects through ExtendScript. A successful apply is reported only when the host returns APPLIED." }));
     return nodes;
   }
 
@@ -322,7 +432,7 @@
       return [emptyState("Open this panel in After Effects", "RR TOOLS is an After Effects 2025 CEP panel. Host detection and .ffx apply are not simulated in a browser. Install the extension, enable PlayerDebugMode for CSXS.12, and open Window > Extensions > RR TOOLS.")];
     }
     if (state.section === "presets") {
-      return renderPresetList(state, "bundle", "No library presets", "No .ffx files were found in " + (state.paths.presets || "the presets folder") + ". Add real presets and rescan.");
+      return presetBrowser(state, "Presets", "Library presets from the presets folder.", pagePresets(state), "No library presets", "No .ffx files were found in " + (state.paths.presets || "the presets folder") + ". Add real presets and rescan.");
     }
     if (state.section === "my") {
       var added = state.prefs.myPresetFiles && state.prefs.myPresetFiles.length;
@@ -330,17 +440,73 @@
         ? "None of the added .ffx files could be read."
         : state.paths.my
           ? "No .ffx files were found in " + state.paths.my + ". You can also add individual .ffx files."
-          : "Add one or more .ffx files, or choose a folder of presets. A single preset file does not have to live in a chosen folder.";
-      return renderPresetList(state, "my", "No personal presets", copy);
+          : "Add one or more .ffx files, or choose a folder of presets.";
+      var page = presetBrowser(state, "My Presets", "Your .ffx files. Apply uses the layers selected in After Effects.", pagePresets(state), "No personal presets", copy, myActions(state));
+      return page;
     }
     if (state.section === "categories") return renderCategories(state);
-    if (state.section === "favorites") return renderFavorites(state);
+    if (state.section === "favorites") {
+      return presetBrowser(state, "Favorites", "Starred presets stored in preferences on this computer.", pagePresets(state), "No favorites", "Star a preset to keep it here.");
+    }
+    if (state.section === "tools") return renderTools(state);
     if (state.section === "settings") return renderSettings(state);
     return renderHome(state);
   }
 
+  function renderDetail(state) {
+    var detail = document.getElementById("detail");
+    if (!detail) return;
+    clear(detail);
+    var preset = null;
+    state.catalog.presets.forEach(function (item) {
+      if (item.id === state.detailId) preset = item;
+    });
+    var librarySection = state.section === "home" || state.section === "presets" || state.section === "my" || state.section === "favorites";
+    if (!librarySection || !preset) {
+      detail.className = "";
+      return;
+    }
+    detail.className = "open";
+    var size = "";
+    if (RR.cepfs && RR.cepfs.available && RR.cepfs.available()) size = formatSize(RR.cepfs.create().statSize(preset.filePath));
+    var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
+    detail.appendChild(el("section", { class: "detail-card" }, [
+      el("div", { class: "faint", text: "FFX" }),
+      el("h2", { text: preset.name }),
+      preset.description ? el("p", { text: preset.description }) : null,
+      el("p", { class: "muted", text: "Category" }),
+      el("p", { text: preset.category }),
+      el("p", { class: "muted", text: "Source" }),
+      el("p", { text: sourceLabel(preset) }),
+      size ? el("p", { class: "muted", text: "Size" }) : null,
+      size ? el("p", { text: size }) : null,
+      el("p", { class: "muted", text: "Path" }),
+      el("code", { text: preset.filePath }),
+      el("div", { class: "actions" }, [
+        el("button", {
+          type: "button",
+          "data-action": "apply-one",
+          "data-id": preset.id,
+          disabled: state.busy ? "disabled" : null,
+          text: "Apply to selection"
+        }),
+        el("button", {
+          type: "button",
+          "data-action": "toggle-favorite",
+          "data-id": preset.id,
+          "aria-pressed": favorite ? "true" : "false",
+          text: favorite ? "Unstar" : "Star"
+        }),
+        el("button", { type: "button", "data-action": "reveal-preset", "data-id": preset.id, text: "Open folder" }),
+        el("button", { type: "button", "data-action": "rename-preset", "data-id": preset.id, text: "Rename" }),
+        el("button", { type: "button", class: "danger", "data-action": "delete-preset", "data-id": preset.id, text: "Remove" })
+      ])
+    ]));
+  }
+
   function renderNotice(state) {
     var notice = document.getElementById("notice");
+    if (!notice) return;
     var banner = state.notice;
     if (state.prefsError && (!banner || banner.kind !== "error")) {
       banner = { kind: "error", code: "BAD_PREFS", message: state.prefsError, detail: "" };
@@ -361,6 +527,7 @@
   function renderHost(state) {
     var pill = document.getElementById("host-pill");
     if (!pill) return;
+    clear(pill);
     pill.className = "pill";
     if (state.outsideHost) {
       pill.textContent = "Browser";
@@ -374,25 +541,44 @@
       pill.className = "pill error";
       pill.textContent = "No host";
     } else {
+      var version = (state.host.payload && state.host.payload.version) || "";
       pill.className = "pill ready";
-      pill.textContent = "AE " + ((state.host.payload && state.host.payload.version) || "");
+      pill.appendChild(el("span", { class: "ae", text: "Ae" }));
+      pill.appendChild(el("span", { text: "After Effects" }));
+      pill.appendChild(el("span", { class: "faint", text: version ? "v" + version : "" }));
+      pill.appendChild(el("span", { class: "conn", text: "Connected" }));
     }
     var current = document.getElementById("host-card");
-    if (!current || state.section !== "home") return;
+    if (!current || (state.section !== "home" && state.section !== "tools")) return;
     current.replaceWith(hostCard(state));
   }
 
   function render(state) {
+    var search = document.getElementById("preset-search");
+    var caret = search && document.activeElement === search ? search.selectionStart : null;
     var nav = document.getElementById("nav");
     Array.prototype.forEach.call(nav.querySelectorAll("button"), function (button) {
       if (button.getAttribute("data-section") === state.section) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     });
+    var mine = state.catalog.presets.filter(function (preset) {
+      return preset.source === "my" || preset.source === "myfile";
+    }).length;
+    var count = nav.querySelector("[data-section='my'] .count");
+    if (count) count.textContent = String(mine);
     var view = document.getElementById("view");
     clear(view);
     renderBody(state).forEach(function (node) { if (node) view.appendChild(node); });
+    renderDetail(state);
     renderNotice(state);
     renderHost(state);
+    if (caret != null) {
+      var next = document.getElementById("preset-search");
+      if (next) {
+        next.focus();
+        next.setSelectionRange(caret, caret);
+      }
+    }
   }
 
   function mount(state) {
@@ -401,7 +587,8 @@
     NAV.forEach(function (item) {
       var button = el("button", { type: "button", "data-action": "nav", "data-section": item[0] });
       button.appendChild(icon(item[2]));
-      button.appendChild(document.createTextNode(item[1]));
+      button.appendChild(el("span", { text: item[1] }));
+      if (item[0] === "my") button.appendChild(el("span", { class: "count", text: "0" }));
       nav.appendChild(button);
     });
     render(state);

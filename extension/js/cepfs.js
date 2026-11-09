@@ -64,6 +64,18 @@
           throw new Error("cep.fs.writeFile error " + (result && result.err));
         }
       },
+      rename: function (fromPath, toPath) {
+        var result = window.cep.fs.rename(fromPath, toPath);
+        if (!result || result.err !== 0) {
+          throw new Error("cep.fs.rename error " + (result && result.err));
+        }
+      },
+      deleteFile: function (path) {
+        var result = window.cep.fs.deleteFile(path);
+        if (!result || result.err !== 0) {
+          throw new Error("cep.fs.deleteFile error " + (result && result.err));
+        }
+      },
       makeDir: function (path) {
         if (isDirectory(path)) return;
         var result = window.cep.fs.makedir(path);

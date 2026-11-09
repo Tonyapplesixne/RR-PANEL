@@ -10,7 +10,11 @@
     host: { status: "pending", payload: null, error: "" },
     notice: null,
     busy: false,
-    outsideHost: false
+    outsideHost: false,
+    query: "",
+    categoryFilter: "",
+    favoritesOnly: false,
+    detailId: ""
   };
   var cs = null;
   var bridge = null;
@@ -153,6 +157,94 @@
     refresh();
   }
 
+  function siblingExtras(filePath) {
+    var directory = RR.util.parent(filePath);
+    var stem = RR.util.basename(filePath).replace(/\.ffx$/i, "").toLowerCase();
+    var entries;
+    try {
+      entries = fsApi.readDir(directory);
+    } catch (err) {
+      return [];
+    }
+    return entries.filter(function (entry) {
+      if (entry.isDirectory) return false;
+      var ext = RR.util.extensionOf(entry.name);
+      if (ext !== "json" && ext !== "png" && ext !== "jpg" && ext !== "jpeg" && ext !== "webp") return false;
+      return entry.name.replace(/\.[^.]+$/, "").toLowerCase() === stem;
+    });
+  }
+
+  function renamePreset(preset) {
+    var current = RR.util.basename(preset.filePath).replace(/\.ffx$/i, "");
+    var next = window.prompt("Rename the .ffx file", current);
+    if (next == null) return;
+    next = String(next).trim();
+    if (!next || /[\\/:*?"<>|]/.test(next)) {
+      notify("error", "BAD_NAME", "Use a file name without slashes or other reserved characters.");
+      return;
+    }
+    if (!/\.ffx$/i.test(next)) next += ".ffx";
+    var target = RR.util.join(RR.util.parent(preset.filePath), next);
+    if (RR.util.samePath(target, preset.filePath)) return;
+    if (fsApi.exists(target)) {
+      notify("error", "EXISTS", "A file with that name is already in the folder.");
+      return;
+    }
+    var extras = siblingExtras(preset.filePath);
+    var stem = next.replace(/\.ffx$/i, "");
+    try {
+      fsApi.rename(preset.filePath, target);
+    } catch (err) {
+      notify("error", "RENAME_FAILED", "Could not rename the preset. " + err.message);
+      return;
+    }
+    extras.forEach(function (entry) {
+      var renamed = RR.util.join(RR.util.parent(preset.filePath), stem + "." + RR.util.extensionOf(entry.name));
+      if (RR.util.samePath(renamed, entry.path) || fsApi.exists(renamed)) return;
+      try { fsApi.rename(entry.path, renamed); } catch (err) { /* the preset file already moved */ }
+    });
+    state.prefs.myPresetFiles = state.prefs.myPresetFiles.map(function (item) {
+      return RR.util.samePath(item, preset.filePath) ? target : item;
+    });
+    scan();
+    var match = null;
+    state.catalog.presets.forEach(function (item) {
+      if (RR.util.samePath(item.filePath, target)) match = item;
+    });
+    if (match) {
+      state.prefs.favorites = RR.preferences.replaceId(state.prefs.favorites, preset.id, match.id);
+      state.prefs.selected = RR.preferences.replaceId(state.prefs.selected, preset.id, match.id);
+      state.detailId = match.id;
+    }
+    if (savePrefs(false)) {
+      state.notice = { kind: "ok", code: "RENAMED", message: "Renamed the preset file to " + next + ".", detail: "" };
+      RR.view.render(state);
+    }
+  }
+
+  function deletePreset(preset) {
+    if (!window.confirm("Delete " + preset.name + " from disk? This removes the .ffx file.")) return;
+    try {
+      fsApi.deleteFile(preset.filePath);
+      siblingExtras(preset.filePath).forEach(function (entry) {
+        try { fsApi.deleteFile(entry.path); } catch (err) { /* sidecar cleanup is best effort */ }
+      });
+    } catch (err) {
+      notify("error", "DELETE_FAILED", "Could not delete the preset. " + err.message);
+      return;
+    }
+    state.prefs.myPresetFiles = state.prefs.myPresetFiles.filter(function (item) {
+      return !RR.util.samePath(item, preset.filePath);
+    });
+    state.prefs.favorites = state.prefs.favorites.filter(function (id) { return id !== preset.id; });
+    state.prefs.selected = state.prefs.selected.filter(function (id) { return id !== preset.id; });
+    if (state.detailId === preset.id) state.detailId = "";
+    if (savePrefs(false)) {
+      state.notice = { kind: "ok", code: "DELETED", message: "Deleted " + preset.name + ".", detail: "" };
+      refresh();
+    }
+  }
+
   function reveal(path) {
     if (!path) {
       notify("error", "MISSING_FOLDER", "That folder is not set.");
@@ -166,8 +258,35 @@
   var actions = {
     nav: function (button) {
       state.section = button.getAttribute("data-section");
+      state.query = "";
+      state.categoryFilter = "";
+      state.favoritesOnly = false;
       savePrefs(false);
       RR.view.render(state);
+    },
+    inspect: function (button) {
+      state.detailId = button.getAttribute("data-id");
+      RR.view.render(state);
+    },
+    "set-view": function (button) {
+      var mode = button.getAttribute("data-mode") === "list" ? "list" : "grid";
+      mutatePrefs(function () { state.prefs.viewMode = mode; });
+    },
+    "toggle-fav-filter": function () {
+      state.favoritesOnly = !state.favoritesOnly;
+      RR.view.render(state);
+    },
+    "rename-preset": function (button) {
+      var preset = findPreset(button.getAttribute("data-id"));
+      if (preset) renamePreset(preset);
+    },
+    "delete-preset": function (button) {
+      var preset = findPreset(button.getAttribute("data-id"));
+      if (preset) deletePreset(preset);
+    },
+    "reveal-preset": function (button) {
+      var preset = findPreset(button.getAttribute("data-id"));
+      if (preset) reveal(RR.util.parent(preset.filePath));
     },
     "toggle-select": function (button) {
       var id = button.getAttribute("data-id");
@@ -254,6 +373,18 @@
     "reveal-my": function () { reveal(state.paths.my); },
     "reveal-prefs": function () { reveal(RR.util.parent(state.prefsPath)); }
   };
+
+  document.body.addEventListener("input", function (event) {
+    if (event.target.id !== "preset-search") return;
+    state.query = event.target.value;
+    RR.view.render(state);
+  });
+
+  document.body.addEventListener("change", function (event) {
+    if (event.target.id !== "category-filter") return;
+    state.categoryFilter = event.target.value;
+    RR.view.render(state);
+  });
 
   document.body.addEventListener("click", function (event) {
     var button = event.target.closest("[data-action]");

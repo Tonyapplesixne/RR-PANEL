@@ -8,19 +8,31 @@
 </head>
 <body>
   <div id="app">
-    <header class="top">
+    <aside id="sidebar">
       <div class="brand">
-        <span class="mark" aria-hidden="true"></span>
+        <span class="logo" aria-hidden="true">RR</span>
         <div>
           <strong>RR TOOLS</strong>
-          <em>Preset panel</em>
+          <em>After Effects panel</em>
         </div>
       </div>
-      <div id="host-pill" class="pill">Checking</div>
-    </header>
-    <nav id="nav" aria-label="Sections"></nav>
-    <div id="notice" class="notice" hidden></div>
-    <main id="view"></main>
+      <nav id="nav" aria-label="Sections"></nav>
+      <div class="side-foot">
+        <strong>RR TOOLS</strong>
+        <span>Preset panel</span>
+        <span class="ver">1.0.0</span>
+      </div>
+    </aside>
+    <div id="workspace">
+      <header class="topbar">
+        <div id="host-pill" class="pill">Checking</div>
+      </header>
+      <div id="notice" class="notice" hidden></div>
+      <div id="stage">
+        <main id="view"></main>
+        <aside id="detail"></aside>
+      </div>
+    </div>
   </div>
   <script src="js/CSInterface.js"></script>
   <script src="js/util.js"></script>

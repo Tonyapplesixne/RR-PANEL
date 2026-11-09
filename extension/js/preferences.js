@@ -1,6 +1,6 @@
 (function (root) {
   var RR = root.RRTools = root.RRTools || {};
-  var SECTIONS = ["home", "presets", "categories", "favorites", "my", "settings"];
+  var SECTIONS = ["home", "presets", "categories", "favorites", "my", "tools", "settings"];
 
   function uniqueStrings(value) {
     var list = [];
@@ -22,6 +22,7 @@
       myPresetsPath: "",
       myPresetFiles: [],
       bundlePresetsPath: "",
+      viewMode: "grid",
       section: "home"
     };
   }
@@ -37,6 +38,7 @@
       myPresetsPath: typeof data.myPresetsPath === "string" ? data.myPresetsPath : "",
       myPresetFiles: uniqueStrings(data.myPresetFiles),
       bundlePresetsPath: typeof data.bundlePresetsPath === "string" ? data.bundlePresetsPath : "",
+      viewMode: data.viewMode === "list" ? "list" : "grid",
       section: section
     };
   }
@@ -57,6 +59,11 @@
     return uniqueStrings(list).indexOf(id) !== -1;
   }
 
+  function replaceId(list, fromId, toId) {
+    if (!fromId || !toId || fromId === toId) return uniqueStrings(list);
+    return uniqueStrings(list).map(function (id) { return id === fromId ? toId : id; });
+  }
+
   function missingIds(list, knownIds) {
     var known = {};
     knownIds.forEach(function (id) { known[id] = true; });
@@ -69,6 +76,7 @@
     normalize: normalize,
     serialize: serialize,
     toggleId: toggleId,
+    replaceId: replaceId,
     contains: contains,
     missingIds: missingIds
   };

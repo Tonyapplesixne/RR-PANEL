@@ -33,15 +33,15 @@
           <Menu>RR TOOLS</Menu>
           <Geometry>
             <Size>
-              <Height>680</Height>
-              <Width>360</Width>
+              <Height>760</Height>
+              <Width>1100</Width>
             </Size>
             <MaxSize>
-              <Height>2200</Height>
-              <Width>1400</Width>
+              <Height>2400</Height>
+              <Width>4000</Width>
             </MaxSize>
             <MinSize>
-              <Height>320</Height>
+              <Height>360</Height>
               <Width>280</Width>
             </MinSize>
           </Geometry>
