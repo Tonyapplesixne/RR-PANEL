@@ -10,6 +10,14 @@
     4. With no composition active, the probe returns code NO_COMP.
 */
 
+if (typeof JSON !== "object" || typeof JSON.stringify !== "function" || typeof JSON.parse !== "function") {
+    var json2File = new File(new File($.fileName).parent.fsName + "/json2.jsx");
+    if (!json2File.exists) {
+        throw new Error("Missing " + json2File.fsName);
+    }
+    $.evalFile(json2File);
+}
+
 if (typeof RRTools === "undefined") {
     RRTools = {};
 }

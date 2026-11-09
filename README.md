@@ -13,6 +13,7 @@ extension/css/                 dark panel styles
 extension/js/CSInterface.js    Adobe CSInterface 12.0.0
 extension/js/                  catalog, preferences, host bridge, UI
 extension/jsx/host.jsx         ExtendScript: probe, applyPreset, reveal folder
+extension/jsx/json2.jsx        Public-domain JSON for ExtendScript, which has none
 extension/assets/              panel icons
 presets/                       library of real .ffx files (none are shipped)
 data/catalog.json              empty shipped catalog
