@@ -304,7 +304,7 @@
         text: "Solid"
       })
     ]));
-    children.push(el("p", { class: "faint", text: "Uses the active composition width, height, pixel aspect, and duration." }));
+    children.push(el("p", { class: "faint", text: "Copies the selected layer's width, height, and in/out points. The solid is white." }));
     return el("section", { class: "host-card", id: "host-card" }, children);
   }
 

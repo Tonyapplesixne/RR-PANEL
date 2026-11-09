@@ -326,14 +326,33 @@ RRTools.addLayer = function (raw) {
         });
     }
     var comp = found.comp;
+    var selected = comp.selectedLayers;
+    if (!selected || selected.length === 0) {
+        return RRTools.stringify({
+            ok: false,
+            code: "NO_LAYER",
+            message: "Select a layer. The new layer copies that layer's size and its in and out points."
+        });
+    }
+    var source = selected[0];
+    var box = RRTools.layerBox(source, comp);
     var name = kind === "adjustment" ? "Adjustment Layer" : "Solid";
-    var color = kind === "adjustment" ? [1, 1, 1] : [0, 0, 0];
     var layer = null;
     app.beginUndoGroup(kind === "adjustment" ? "RR TOOLS Adjustment Layer" : "RR TOOLS Solid");
     try {
-        layer = comp.layers.addSolid(color, name, comp.width, comp.height, comp.pixelAspect, comp.duration);
+        layer = comp.layers.addSolid([1, 1, 1], name, box.width, box.height, box.pixelAspect, comp.duration);
         if (kind === "adjustment") {
             layer.adjustmentLayer = true;
+        }
+        layer.startTime = source.startTime;
+        layer.inPoint = source.inPoint;
+        layer.outPoint = source.outPoint;
+        try {
+            layer.moveBefore(source);
+        } catch (moveErr) {}
+        var i;
+        for (i = 1; i <= comp.numLayers; i++) {
+            comp.layer(i).selected = false;
         }
         layer.selected = true;
     } catch (err) {
@@ -349,10 +368,34 @@ RRTools.addLayer = function (raw) {
         ok: true,
         code: "LAYER_CREATED",
         kind: kind,
-        message: "Created " + name + " at " + comp.width + "×" + comp.height + " in \"" + comp.name + "\".",
+        message: "Created a white " + name + " at " + box.width + "×" + box.height + ", matching \"" + source.name + "\".",
         name: String(layer.name),
         index: layer.index,
-        width: comp.width,
-        height: comp.height
+        width: box.width,
+        height: box.height
     });
+};
+
+RRTools.layerBox = function (layer, comp) {
+    var width = 0;
+    var height = 0;
+    var pixelAspect = comp.pixelAspect;
+    try {
+        if (layer.width > 0) width = layer.width;
+        if (layer.height > 0) height = layer.height;
+    } catch (err) {}
+    if (!(width > 0) || !(height > 0)) {
+        try {
+            var rect = layer.sourceRectAtTime(comp.time, false);
+            width = Math.max(1, Math.round(rect.width));
+            height = Math.max(1, Math.round(rect.height));
+        } catch (err2) {
+            width = comp.width;
+            height = comp.height;
+        }
+    }
+    try {
+        if (layer.source && layer.source.pixelAspect > 0) pixelAspect = layer.source.pixelAspect;
+    } catch (err3) {}
+    return { width: width, height: height, pixelAspect: pixelAspect };
 };
