@@ -299,3 +299,60 @@ RRTools.revealFolder = function (raw) {
         path: folder.fsName
     });
 };
+
+RRTools.addLayer = function (raw) {
+    var args = RRTools.parseArgs(raw);
+    if (args.__parseError) {
+        return RRTools.stringify({
+            ok: false,
+            code: "BAD_ARGS",
+            message: "Could not read the layer request."
+        });
+    }
+    var kind = args.kind === "adjustment" ? "adjustment" : (args.kind === "solid" ? "solid" : "");
+    if (!kind) {
+        return RRTools.stringify({
+            ok: false,
+            code: "BAD_ARGS",
+            message: "Choose a solid or an adjustment layer."
+        });
+    }
+    var found = RRTools.activeComp();
+    if (!found.comp) {
+        return RRTools.stringify({
+            ok: false,
+            code: found.error.code,
+            message: found.error.message
+        });
+    }
+    var comp = found.comp;
+    var name = kind === "adjustment" ? "Adjustment Layer" : "Solid";
+    var color = kind === "adjustment" ? [1, 1, 1] : [0, 0, 0];
+    var layer = null;
+    app.beginUndoGroup(kind === "adjustment" ? "RR TOOLS Adjustment Layer" : "RR TOOLS Solid");
+    try {
+        layer = comp.layers.addSolid(color, name, comp.width, comp.height, comp.pixelAspect, comp.duration);
+        if (kind === "adjustment") {
+            layer.adjustmentLayer = true;
+        }
+        layer.selected = true;
+    } catch (err) {
+        return RRTools.stringify({
+            ok: false,
+            code: "LAYER_FAILED",
+            message: "After Effects could not create the layer. " + String(err)
+        });
+    } finally {
+        app.endUndoGroup();
+    }
+    return RRTools.stringify({
+        ok: true,
+        code: "LAYER_CREATED",
+        kind: kind,
+        message: "Created " + name + " at " + comp.width + "×" + comp.height + " in \"" + comp.name + "\".",
+        name: String(layer.name),
+        index: layer.index,
+        width: comp.width,
+        height: comp.height
+    });
+};

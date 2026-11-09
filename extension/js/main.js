@@ -288,6 +288,17 @@
       var preset = findPreset(button.getAttribute("data-id"));
       if (preset) reveal(RR.util.parent(preset.filePath));
     },
+    "add-layer": function (button) {
+      if (state.busy || !bridge) return;
+      var kind = button.getAttribute("data-kind") === "solid" ? "solid" : "adjustment";
+      state.busy = true;
+      RR.view.render(state);
+      bridge.addLayer(kind).then(function (result) {
+        state.busy = false;
+        notify(result.ok ? "ok" : "error", result.code || "LAYER_FAILED", result.message || "After Effects did not create the layer.");
+        probe();
+      });
+    },
     "toggle-select": function (button) {
       var id = button.getAttribute("data-id");
       mutatePrefs(function () { state.prefs.selected = RR.preferences.toggleId(state.prefs.selected, id); });

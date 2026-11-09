@@ -288,6 +288,23 @@
       });
       children.push(list);
     }
+    children.push(el("div", { class: "actions" }, [
+      el("button", {
+        type: "button",
+        "data-action": "add-layer",
+        "data-kind": "adjustment",
+        disabled: state.busy ? "disabled" : null,
+        text: "Adjustment layer"
+      }),
+      el("button", {
+        type: "button",
+        "data-action": "add-layer",
+        "data-kind": "solid",
+        disabled: state.busy ? "disabled" : null,
+        text: "Solid"
+      })
+    ]));
+    children.push(el("p", { class: "faint", text: "Uses the active composition width, height, pixel aspect, and duration." }));
     return el("section", { class: "host-card", id: "host-card" }, children);
   }
 

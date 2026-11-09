@@ -4,7 +4,8 @@
     ping: "ping",
     probe: "probe",
     applyPresets: "applyPresets",
-    revealFolder: "revealFolder"
+    revealFolder: "revealFolder",
+    addLayer: "addLayer"
   };
 
   function createBridge(csInterface) {
@@ -83,7 +84,8 @@
       ping: function () { return call("ping"); },
       probe: function () { return call("probe"); },
       applyPresets: function (paths) { return call("applyPresets", { paths: paths }); },
-      revealFolder: function (path) { return call("revealFolder", { path: path }); }
+      revealFolder: function (path) { return call("revealFolder", { path: path }); },
+      addLayer: function (kind) { return call("addLayer", { kind: kind }); }
     };
   }
 
