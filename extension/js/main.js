@@ -320,6 +320,13 @@
       var command = button.getAttribute("data-command") || "";
       state.paletteOpen = false;
       state.paletteQuery = "";
+      if (command.indexOf("inspect:") === 0) {
+        state.detailId = command.slice(8);
+        state.section = "presets";
+        state.paletteOpen = false;
+        RR.view.render(state);
+        return;
+      }
       if (command.indexOf("nav:") === 0) {
         state.section = command.slice(4);
         state.query = "";
@@ -566,7 +573,7 @@
       return;
     }
     if (!event.target || event.target.id !== "preset-search") return;
-    var cards = document.querySelectorAll("#view .preset-card");
+    var cards = document.querySelectorAll("#view .preset-card, #view .list-row");
     if (!cards.length) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();

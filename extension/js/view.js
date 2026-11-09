@@ -62,7 +62,11 @@
       wrench: '<path d="M14.5 6.5a3.5 3.5 0 0 0-4.8 4.8L4 17l3 3 5.7-5.7a3.5 3.5 0 0 0 4.8-4.8L15 12l-3-3z"/>',
       gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8 16.6 7.4M7.4 16.6 5.8 18.2"/>',
       folder: '<path d="M3.5 7.5h6l2 2h9V19h-17z"/>',
-      refresh: '<path d="M19 12a7 7 0 1 1-2-4.9"/><path d="M19 4.5V8h-3.5"/>'
+      refresh: '<path d="M19 12a7 7 0 1 1-2-4.9"/><path d="M19 4.5V8h-3.5"/>',
+      type: '<path d="M5 6h14M12 6v12M8 18h8"/>',
+      spark: '<path d="M12 3l1.6 5.2L19 10l-5.4 1.8L12 17l-1.6-5.2L5 10l5.4-1.8z"/>',
+      swatch: '<circle cx="12" cy="12" r="6"/>',
+      wave: '<path d="M3 14c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/>'
     };
     var svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
@@ -203,14 +207,38 @@
     return el("div", { class: "preset-grid", "aria-busy": "true", "aria-label": "Loading presets" }, cards);
   }
 
-  function presetCard(preset, state, index) {
+  function toneOf(category) {
+    var key = String(category || "").toLowerCase();
+    if (key.indexOf("text") !== -1 || key.indexOf("type") !== -1) return "text";
+    if (key.indexOf("trans") !== -1) return "transition";
+    if (key.indexOf("color") !== -1 || key.indexOf("grade") !== -1) return "color";
+    if (key.indexOf("util") !== -1 || key.indexOf("tool") !== -1) return "utility";
+    if (key.indexOf("motion") !== -1 || key.indexOf("anim") !== -1) return "motion";
+    return "effect";
+  }
+
+  function toneIcon(tone) {
+    if (tone === "text") return "type";
+    if (tone === "color") return "swatch";
+    if (tone === "utility") return "wrench";
+    if (tone === "motion" || tone === "transition") return "wave";
+    return "spark";
+  }
+
+  function fallbackPlate(preset) {
+    var tone = toneOf(preset.category);
+    var plate = el("div", {
+      class: "fallback tone-" + tone,
+      title: "Generated artwork. This file has no preview image."
+    });
+    plate.appendChild(icon(toneIcon(tone)));
+    plate.appendChild(el("strong", { text: preset.name }));
+    plate.appendChild(el("em", { text: "Artwork" }));
+    return plate;
+  }
+
+  function starButton(preset, state) {
     var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
-    var active = state.detailId === preset.id;
-    var highlighted = state.query && index === state.resultIndex;
-    var preview = el("div", { class: previewUrl(preset) ? "preview real" : "preview placeholder" });
-    var url = previewUrl(preset);
-    if (url) preview.appendChild(el("img", { src: url, alt: "" }));
-    else preview.appendChild(el("span", { text: "No preview" }));
     var star = button("toggle-favorite", "", {
       class: "star" + (state.popId === preset.id ? " pop" : ""),
       "data-id": preset.id,
@@ -219,7 +247,17 @@
       title: favorite ? "Remove favorite" : "Add favorite"
     });
     star.appendChild(icon("star"));
-    preview.appendChild(star);
+    return star;
+  }
+
+  function presetCard(preset, state, index) {
+    var active = state.detailId === preset.id;
+    var highlighted = state.query && index === state.resultIndex;
+    var url = previewUrl(preset);
+    var preview = el("div", { class: url ? "preview real" : "preview" });
+    if (url) preview.appendChild(el("img", { src: url, alt: "" }));
+    else preview.appendChild(fallbackPlate(preset));
+    preview.appendChild(starButton(preset, state));
     var apply = button("apply-one", "Apply", {
       class: "apply",
       "data-id": preset.id,
@@ -248,10 +286,34 @@
   function presetGrid(state, presets, empty) {
     if (state.scanning) return skeletonGrid();
     if (!presets.length) return empty;
-    var mode = state.prefs.viewMode === "list" ? "preset-list" : "preset-grid";
-    return el("div", { class: mode }, presets.map(function (preset, index) {
-      return presetCard(preset, state, index);
+    var list = state.prefs.viewMode === "list";
+    return el("div", { class: list ? "preset-list" : "preset-grid" }, presets.map(function (preset, index) {
+      return list ? listRow(preset, state, index) : presetCard(preset, state, index);
     }));
+  }
+
+  function listRow(preset, state, index) {
+    var url = previewUrl(preset);
+    var thumb = el("div", { class: "list-thumb" });
+    if (url) thumb.appendChild(el("img", { src: url, alt: "" }));
+    else thumb.appendChild(fallbackPlate(preset));
+    var active = state.detailId === preset.id;
+    return el("article", {
+      class: "list-row" + (active ? " active" : "") + (state.query && index === state.resultIndex ? " highlighted" : ""),
+      "data-action": "inspect",
+      "data-id": preset.id,
+      "data-index": String(index)
+    }, [
+      thumb,
+      el("div", { class: "list-copy" }, [
+        el("h2", { text: preset.name }),
+        preset.description ? el("p", { text: preset.description }) : null
+      ]),
+      el("span", { class: "list-cat", text: preset.category }),
+      preset.usedAt ? el("span", { class: "list-when", text: ago(preset.usedAt) }) : null,
+      starButton(preset, state),
+      button("apply-one", "Apply", { class: "apply", "data-id": preset.id, disabled: state.busy ? "disabled" : null })
+    ]);
   }
 
   function libraryBar(state, presets) {
@@ -291,14 +353,25 @@
     if (state.section === "my") {
       return emptyState("✦", "No added presets", "Add .ffx files or choose a folder. Nothing is invented in their place.", state.paths.my || "", { action: "add-files", label: "Add .ffx files" });
     }
-    return emptyState("✦", "Your library is empty", "No presets were found in the presets directory.", path, { action: "rescan", label: "Rescan library" });
+    return emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", path, { action: "rescan", label: "Rescan library" });
   }
 
-  function stat(label, value) {
+  function stat(label, value, note) {
     return el("div", { class: "stat" }, [
       el("span", { text: label }),
-      el("b", { text: String(value) })
+      el("b", { text: String(value) }),
+      note ? el("small", { text: note }) : null
     ]);
+  }
+
+  function recentPresets(state, limit) {
+    var known = knownMap(state.catalog.presets || []);
+    var list = [];
+    (state.prefs.recent || []).forEach(function (item) {
+      if (!known[item.id] || list.length >= limit) return;
+      list.push(Object.assign({}, known[item.id], { usedAt: item.at }));
+    });
+    return list;
   }
 
   function renderHome(state) {
@@ -328,10 +401,10 @@
         el("img", { class: "hero-mark", src: "assets/branding/logos/rr-crown.png", alt: "" })
       ]),
       el("div", { class: "stats" }, [
-        stat("Presets", presets.length),
-        stat("Favorites", favoriteCount),
-        stat("Recent", recentCount),
-        stat("Categories", categoriesOf(presets).length)
+        stat("Presets", presets.length, "In the library"),
+        stat("Favorites", favoriteCount, favoriteCount ? "Starred here" : "None yet"),
+        stat("Recent", recentCount, recentCount ? "Applied from here" : "None yet"),
+        stat("Categories", categoriesOf(presets).length, "From your files")
       ]),
       el("section", { class: "block" }, [
         el("div", { class: "block-head" }, [el("h2", { text: "Quick actions" })]),
@@ -343,14 +416,48 @@
         ])
       ])
     ];
+    var recent = recentPresets(state, 3);
+    if (recent.length) {
+      nodes.push(el("section", { class: "block" }, [
+        el("div", { class: "block-head" }, [
+          el("h2", { text: "Recently used" }),
+          button("nav", "See all", { class: "text-btn", "data-section": "recent" })
+        ]),
+        presetGrid(state, recent, null)
+      ]));
+    }
+    var groups = RR.catalog.groupByCategory(presets);
+    if (groups.length) {
+      nodes.push(el("section", { class: "block" }, [
+        el("div", { class: "block-head" }, [el("h2", { text: "Explore by category" })]),
+        el("div", { class: "cat-grid" }, groups.map(function (group) {
+          return categoryTile(group);
+        }))
+      ]));
+    }
     nodes.push(el("section", { class: "block" }, [
       el("div", { class: "block-head" }, [
         el("h2", { text: "Featured presets" }),
         presets.length ? button("nav", "See all", { class: "text-btn", "data-section": "presets" }) : null
       ]),
-      featured.length ? presetGrid(state, featured, null) : emptyState("✦", "Your library is empty", "Add real presets, then rescan. Featured cards use those files, not sample artwork.", state.paths.presets || "", { action: "add-files", label: "Add .ffx files" })
+      featured.length ? presetGrid(state, featured, null) : emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", state.paths.presets || "", { action: "rescan", label: "Rescan library" })
     ]));
     return nodes;
+  }
+
+  function categoryTile(group) {
+    var tone = toneOf(group.category);
+    return el("button", {
+      type: "button",
+      class: "cat-tile tone-" + tone,
+      "data-action": "open-category",
+      "data-category": group.category,
+      title: group.category
+    }, [
+      icon(toneIcon(tone)),
+      el("strong", { text: group.category }),
+      el("span", { text: group.presets.length + (group.presets.length === 1 ? " preset" : " presets") })
+    ]);
   }
 
   function actionCard(action, section, glyph, title, copy) {
@@ -385,16 +492,8 @@
     if (!groups.length) {
       return [String(state.query || "").trim() ? noResults(state) : libraryEmpty(state)];
     }
-    return [el("div", { class: "category-list" }, groups.map(function (group) {
-      return el("button", {
-        type: "button",
-        class: "category-row",
-        "data-action": "open-category",
-        "data-category": group.category
-      }, [
-        el("strong", { text: group.category }),
-        el("span", { text: group.presets.length + (group.presets.length === 1 ? " preset" : " presets") })
-      ]);
+    return [el("div", { class: "cat-grid" }, groups.map(function (group) {
+      return categoryTile(group);
     }))];
   }
 
@@ -481,7 +580,8 @@
         el("div", { class: "block-head" }, [el("h2", { text: "About" })]),
         el("div", { class: "about" }, [
           el("strong", { text: "RR TOOLS" }),
-          el("span", { text: "v1.0.0" }),
+          el("span", { text: "Motion toolkit for After Effects" }),
+          el("span", { text: "Version 1.0.0" }),
           el("span", { text: "After Effects 2025 · CEP 12" }),
           el("span", { id: "ae-version", text: version ? "Connected host " + version : "Host version appears when After Effects answers." }),
           el("p", { class: "muted", text: "Update checks are not connected." })
@@ -516,9 +616,9 @@
     detail.className = "open";
     var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
     var url = previewUrl(preset);
-    var preview = el("div", { class: url ? "preview real" : "preview placeholder" });
+    var preview = el("div", { class: "preview detail-preview" });
     if (url) preview.appendChild(el("img", { src: url, alt: "" }));
-    else preview.appendChild(el("span", { text: "No preview" }));
+    else preview.appendChild(fallbackPlate(preset));
     var updated = formatWhen(mtimeOf(preset.filePath));
     var tags = (preset.tags || []).map(function (tag) { return el("span", { text: tag }); });
     detail.appendChild(el("section", { class: "detail-card" }, [
@@ -598,7 +698,7 @@
       pill.className = "pill ready";
       pill.appendChild(dot);
       pill.appendChild(el("span", { text: "Connected" }));
-      if (version) pill.appendChild(el("span", { class: "faint", text: version }));
+      if (version) pill.appendChild(el("span", { class: "host-version", text: version }));
       if (ae) ae.textContent = version ? "Connected host " + version : "Connected.";
     }
   }
@@ -609,9 +709,16 @@
     if (!palette || !list) return;
     palette.hidden = !state.paletteOpen;
     var query = String(state.paletteQuery || "").trim().toLowerCase();
-    var commands = COMMANDS.filter(function (command) {
+    var hits = [];
+    if (query) {
+      (state.catalog.presets || []).forEach(function (preset) {
+        if (hits.length >= 6 || !matchesQuery(preset, query)) return;
+        hits.push(["inspect:" + preset.id, preset.name, preset.category]);
+      });
+    }
+    var commands = hits.concat(COMMANDS.filter(function (command) {
       return !query || (command[1] + " " + command[2]).toLowerCase().indexOf(query) !== -1;
-    });
+    }));
     if (state.paletteIndex >= commands.length) state.paletteIndex = 0;
     clear(list);
     if (!commands.length) {
