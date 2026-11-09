@@ -174,11 +174,19 @@
       "aria-label": favorite ? "Remove favorite" : "Add favorite",
       text: favorite ? "★" : "☆"
     });
+    var menu = el("details", { class: "more", "data-action": "menu" }, [
+      el("summary", { "aria-label": "Preset options", text: "···" }),
+      el("div", { class: "menu" }, [
+        el("button", { type: "button", "data-action": "reveal-preset", "data-id": preset.id, text: "Open folder" }),
+        el("button", { type: "button", "data-action": "rename-preset", "data-id": preset.id, text: "Rename" }),
+        el("button", { type: "button", class: "danger", "data-action": "delete-preset", "data-id": preset.id, text: "Remove" })
+      ])
+    ]);
     return el("article", {
       class: "preset-card" + (active ? " active" : ""),
       "data-action": "inspect",
       "data-id": preset.id
-    }, [thumb, copy, apply, star]);
+    }, [thumb, copy, el("div", { class: "card-actions" }, [star, apply, menu])]);
   }
 
   function toolbar(state, presets) {
@@ -627,6 +635,13 @@
   function mount(state) {
     var nav = document.getElementById("nav");
     clear(nav);
+    var toggle = document.getElementById("sidebar-toggle");
+    if (toggle && !toggle.getAttribute("data-bound")) {
+      toggle.setAttribute("data-bound", "true");
+      toggle.addEventListener("click", function () {
+        document.getElementById("app").classList.toggle("rail");
+      });
+    }
     NAV.forEach(function (item) {
       var button = el("button", { type: "button", "data-action": "nav", "data-section": item[0] });
       button.appendChild(icon(item[2]));
