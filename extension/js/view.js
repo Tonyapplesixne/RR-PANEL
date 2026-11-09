@@ -339,11 +339,11 @@
     ]));
     return el("div", { class: "host-split", id: "host-card" }, [
       el("section", { class: "host-card" }, [
-        el("img", { class: "card-logo", src: "assets/logos/rr-mark.svg", alt: "" }),
+        el("img", { class: "card-logo", src: "assets/logos/rr-mark.png", alt: "" }),
         el("div", { class: "comp-copy" }, compBody)
       ]),
       el("section", { class: "host-card" }, [
-        el("img", { class: "card-logo", src: "assets/logos/rr-mark.svg", alt: "" }),
+        el("img", { class: "card-logo", src: "assets/logos/rr-mark.png", alt: "" }),
         el("div", { class: "comp-copy" }, layerBody)
       ])
     ]);
@@ -351,7 +351,7 @@
 
   function welcomeBanner() {
     return el("section", { class: "banner" }, [
-      el("img", { class: "banner-logo", src: "assets/logos/rr-mark.svg", alt: "" }),
+      el("img", { class: "banner-logo", src: "assets/logos/rr-mark.png", alt: "" }),
       el("div", { class: "banner-copy" }, [
         el("div", { class: "kicker", text: "Welcome to" }),
         el("h1", { text: "RR TOOLS" }),

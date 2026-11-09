@@ -79,17 +79,20 @@ input[type="search"] {
   gap: 10px;
   padding: 14px 10px;
   background:
-    url("../assets/backgrounds/violet-field.svg") center bottom / cover no-repeat,
-    linear-gradient(180deg, rgba(28, 14, 52, 0.96), rgba(7, 6, 13, 0.96));
+    linear-gradient(180deg, rgba(7, 6, 13, 0.35), rgba(7, 6, 13, 0.82)),
+    url("../assets/backgrounds/sidebar-violet.png") center / cover no-repeat,
+    #07060d;
   border-right: 1px solid var(--line);
   box-shadow: inset -24px 0 40px rgba(120, 60, 255, 0.06);
 }
 
-.brand { display: flex; align-items: flex-start; gap: 8px; padding: 4px 4px 8px; }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 2px 4px 8px; position: relative; }
+.brand > div { text-align: center; }
 .brand strong { display: block; letter-spacing: 0.16em; font-size: 13px; }
 .brand em { display: block; color: var(--faint); font-style: normal; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
-.logo-img { width: 84px; height: 84px; display: block; filter: drop-shadow(0 0 14px rgba(140, 100, 255, 0.7)); }
-.side-foot img { width: 28px; height: 28px; }
+.logo-img { width: 100%; height: auto; display: block; }
+.rail-toggle { position: absolute; top: 0; right: 0; }
+.side-foot img { width: 46px; height: auto; }
 .rail-toggle {
   margin-left: auto;
   width: 28px;
@@ -332,7 +335,7 @@ input[type="search"] {
   width: 72px;
   height: 72px;
   margin: 0 auto 10px;
-  background: url("../assets/logos/rr-mark.svg") center/contain no-repeat;
+  background: url("../assets/logos/rr-mark.png") center/contain no-repeat;
   filter: drop-shadow(0 0 14px rgba(139, 108, 255, 0.45));
 }
 .empty h2, .group-card h2, .detail-card h2 { margin: 0 0 4px; font-size: 15px; }
@@ -348,7 +351,7 @@ input[type="search"] {
 
 @media (max-width: 760px) {
   #sidebar { width: 68px; flex-basis: 68px; padding: 10px 8px; }
-  .logo-img { width: 44px; height: 44px; }
+  .logo-img { width: 100%; height: auto; }
   .banner { grid-template-columns: auto minmax(0, 1fr); }
   .banner-logo { width: 64px; height: 64px; }
   .quick, .banner .faint { display: none; }
@@ -363,7 +366,7 @@ input[type="search"] {
 }
 
 #app.rail #sidebar { width: 68px; flex-basis: 68px; padding: 10px 8px; }
-#app.rail .logo-img { width: 44px; height: 44px; }
+#app.rail .logo-img { width: 100%; height: auto; }
 #app.rail .brand div, #app.rail #nav button span, #app.rail .side-foot strong, #app.rail .side-foot .ver { display: none; }
 #app.rail .brand { justify-content: center; }
 #app.rail #nav button, #app.rail .side-foot { justify-content: center; }
