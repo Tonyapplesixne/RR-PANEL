@@ -11,6 +11,7 @@
     ["settings", "Settings", "M3 4.5h10M3 8h10M3 11.5h10M6 3.2v2.6M10 6.7v2.6M7.5 10.2v2.6"]
   ];
   var previewCache = {};
+  var mtimeCache = {};
 
   function el(tag, attrs, children) {
     var node = document.createElement(tag);
@@ -120,13 +121,33 @@
 
   function filteredPresets(state, presets) {
     var query = String(state.query || "").trim().toLowerCase();
-    return presets.filter(function (preset) {
+    var list = presets.filter(function (preset) {
       if (state.favoritesOnly && !RR.preferences.contains(state.prefs.favorites, preset.id)) return false;
       if (state.categoryFilter && preset.category !== state.categoryFilter) return false;
       if (!query) return true;
       var hay = (preset.name + " " + preset.category + " " + preset.filePath).toLowerCase();
       return hay.indexOf(query) !== -1;
     });
+    list.sort(function (a, b) {
+      if (state.sort === "date") return mtimeOf(b.filePath) - mtimeOf(a.filePath) || a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name);
+    });
+    return list;
+  }
+
+  function mtimeOf(filePath) {
+    if (mtimeCache[filePath] != null) return mtimeCache[filePath];
+    var value = 0;
+    try {
+      if (typeof require === "function") {
+        var stat = require("fs").statSync(filePath);
+        value = stat.mtimeMs || (stat.mtime ? stat.mtime.getTime() : 0);
+      }
+    } catch (err) {
+      value = 0;
+    }
+    mtimeCache[filePath] = value;
+    return value;
   }
 
   function stat(value, label) {
@@ -219,6 +240,10 @@
         "aria-pressed": state.favoritesOnly ? "true" : "false",
         text: "Favorites"
       }),
+      el("select", { id: "sort-mode", "aria-label": "Sort" }, [
+        el("option", { value: "name", text: "Name", selected: state.sort !== "date" ? "selected" : null }),
+        el("option", { value: "date", text: "Date", selected: state.sort === "date" ? "selected" : null })
+      ]),
       el("button", {
         type: "button",
         "data-action": "set-view",
@@ -279,68 +304,72 @@
       ]);
     }
     var payload = host.payload || {};
-    var children = [];
+    var compBody = [el("div", { class: "kicker", text: "Composition" })];
     if (payload.contextError) {
-      children.push(el("div", { class: "comp-row" }, [
-        el("div", { class: "comp-mark", text: "AE" }),
-        el("div", {}, [
-          el("div", { class: "kicker", text: "Composition" }),
-          el("p", { class: "warn", text: payload.contextError.message }),
-          el("div", { class: "code faint", text: payload.contextError.code })
-        ])
-      ]));
+      compBody.push(el("p", { class: "warn", text: payload.contextError.message }));
+      compBody.push(el("div", { class: "code faint", text: payload.contextError.code }));
     } else if (payload.composition) {
       var comp = payload.composition;
-      children.push(el("div", { class: "comp-row" }, [
-        el("div", { class: "comp-mark", text: "AE" }),
-        el("div", { class: "comp-copy" }, [
-          el("div", { class: "kicker", text: "Composition" }),
-          el("strong", { text: comp.name }),
-          el("div", { class: "comp-meta" }, [
-            el("span", { text: comp.width + " × " + comp.height }),
-            el("span", { text: comp.frameRate + " fps" }),
-            el("span", { text: comp.numLayers + " layers" }),
-            el("span", { text: Number(comp.time).toFixed(2) + "s" })
-          ]),
-          payload.projectName ? el("div", { class: "faint", text: payload.projectName }) : null
-        ])
+      compBody.push(el("strong", { text: comp.name }));
+      compBody.push(el("div", { class: "comp-meta" }, [
+        el("span", { text: comp.width + " × " + comp.height }),
+        el("span", { text: comp.frameRate + " fps" }),
+        el("span", { text: comp.numLayers + " layers" }),
+        el("span", { text: Number(comp.time).toFixed(2) + "s" })
       ]));
+      if (payload.projectName) compBody.push(el("div", { class: "faint", text: payload.projectName }));
     }
+    var layerBody = [el("div", { class: "kicker", text: "Selected layer" })];
     if (payload.selectionError) {
-      children.push(el("p", { class: "warn layer-note", text: payload.selectionError.message }));
+      layerBody.push(el("p", { class: "warn", text: payload.selectionError.message }));
     } else if (payload.selectedLayers && payload.selectedLayers.length) {
-      var row = el("div", { class: "layer-row" });
-      payload.selectedLayers.forEach(function (layer) {
-        row.appendChild(el("div", { class: "layer-chip" }, [
-          el("strong", { text: layer.name }),
-          el("span", { text: "#" + layer.index }),
-          el("span", { class: "kind", text: layer.kind || "Layer" })
-        ]));
-      });
-      children.push(row);
+      var first = payload.selectedLayers[0];
+      layerBody.push(el("strong", { text: first.name }));
+      layerBody.push(el("div", { class: "comp-meta" }, [
+        el("span", { text: first.kind || "Layer" }),
+        el("span", { text: "Layer #" + first.index }),
+        el("span", { text: payload.selectedLayers.length + " selected" })
+      ]));
+    } else {
+      layerBody.push(el("p", { class: "muted", text: "No layer selected." }));
     }
-    children.push(el("div", { class: "actions" }, [
-      el("button", {
-        type: "button",
-        "data-action": "add-layer",
-        "data-kind": "adjustment",
-        disabled: state.busy ? "disabled" : null,
-        text: "Adjustment layer"
-      }),
-      el("button", {
-        type: "button",
-        "data-action": "add-layer",
-        "data-kind": "solid",
-        disabled: state.busy ? "disabled" : null,
-        text: "Solid"
-      }),
-      el("p", { class: "faint hint", text: "Copies the selected layer's width, height, and in/out points. The solid is white." })
+    layerBody.push(el("div", { class: "actions" }, [
+      el("button", { type: "button", "data-action": "add-layer", "data-kind": "adjustment", disabled: state.busy ? "disabled" : null, text: "Adjustment layer" }),
+      el("button", { type: "button", "data-action": "add-layer", "data-kind": "solid", disabled: state.busy ? "disabled" : null, text: "Solid" })
     ]));
-    return el("section", { class: "host-card", id: "host-card" }, children);
+    return el("div", { class: "host-split", id: "host-card" }, [
+      el("section", { class: "host-card" }, [
+        el("img", { class: "card-logo", src: "assets/logos/rr-mark.svg", alt: "" }),
+        el("div", { class: "comp-copy" }, compBody)
+      ]),
+      el("section", { class: "host-card" }, [
+        el("img", { class: "card-logo", src: "assets/logos/rr-mark.svg", alt: "" }),
+        el("div", { class: "comp-copy" }, layerBody)
+      ])
+    ]);
+  }
+
+  function welcomeBanner() {
+    return el("section", { class: "banner" }, [
+      el("img", { class: "banner-logo", src: "assets/logos/rr-mark.svg", alt: "" }),
+      el("div", { class: "banner-copy" }, [
+        el("div", { class: "kicker", text: "Welcome to" }),
+        el("h1", { text: "RR TOOLS" }),
+        el("p", { text: "Your creative workspace." }),
+        el("p", { class: "faint", text: "Edit faster. Create more." })
+      ]),
+      el("div", { class: "quick" }, [
+        el("div", { class: "kicker", text: "Quick Access" }),
+        el("button", { type: "button", "data-action": "nav", "data-section": "presets", text: "Open Presets" }),
+        el("button", { type: "button", "data-action": "nav", "data-section": "tools", text: "Quick Tools" }),
+        el("button", { type: "button", "data-action": "toggle-sidebar", text: "Collapse sidebar" }),
+        el("button", { type: "button", "data-action": "nav", "data-section": "settings", text: "Settings" })
+      ])
+    ]);
   }
 
   function renderHome(state) {
-    var nodes = [hostCard(state)];
+    var nodes = [welcomeBanner(), hostCard(state)];
     if (state.catalog.warnings.length) {
       nodes.push(el("section", { class: "empty" }, state.catalog.warnings.map(function (warning) {
         return el("p", { class: "warn", text: warning });
@@ -356,7 +385,7 @@
       "Presets found on this computer.",
       state.catalog.presets,
       "No presets yet",
-      "The library folder has no .ffx files.",
+      "Import your .ffx files to get started.",
       null,
       { action: "add-files", label: "Add .ffx files" }
     ).slice(1));
@@ -587,9 +616,12 @@
       pill.textContent = "Checking";
       return;
     }
+    var sideVersion = document.getElementById("side-version");
     if (state.host.status === "error") {
       pill.className = "pill error";
-      pill.textContent = "No host";
+      pill.appendChild(el("span", { class: "ae", text: "Ae" }));
+      pill.appendChild(el("span", { text: "Disconnected" }));
+      if (sideVersion) sideVersion.textContent = "Disconnected";
     } else {
       var version = (state.host.payload && state.host.payload.version) || "";
       pill.className = "pill ready";
@@ -597,6 +629,7 @@
       pill.appendChild(el("span", { text: "After Effects" }));
       pill.appendChild(el("span", { class: "faint", text: version ? "v" + version : "" }));
       pill.appendChild(el("span", { class: "conn", text: "Connected" }));
+      if (sideVersion) sideVersion.textContent = version || "Connected";
     }
     var current = document.getElementById("host-card");
     if (!current || (state.section !== "home" && state.section !== "tools")) return;
@@ -635,13 +668,6 @@
   function mount(state) {
     var nav = document.getElementById("nav");
     clear(nav);
-    var toggle = document.getElementById("sidebar-toggle");
-    if (toggle && !toggle.getAttribute("data-bound")) {
-      toggle.setAttribute("data-bound", "true");
-      toggle.addEventListener("click", function () {
-        document.getElementById("app").classList.toggle("rail");
-      });
-    }
     NAV.forEach(function (item) {
       var button = el("button", { type: "button", "data-action": "nav", "data-section": item[0] });
       button.appendChild(icon(item[2]));
@@ -656,6 +682,6 @@
     mount: mount,
     render: render,
     renderHost: renderHost,
-    clearPreviewCache: function () { previewCache = {}; }
+    clearPreviewCache: function () { previewCache = {}; mtimeCache = {}; }
   };
 })(typeof window !== "undefined" ? window : global);

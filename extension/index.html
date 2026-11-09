@@ -10,18 +10,20 @@
   <div id="app">
     <aside id="sidebar">
       <div class="brand">
-        <span class="logo" aria-hidden="true">RR</span>
+        <img class="logo-img" src="assets/logos/rr-mark.svg" alt="">
         <div>
           <strong>RR TOOLS</strong>
-          <em>AE Panel</em>
+          <em>After Effects Toolkit</em>
         </div>
-        <button type="button" id="sidebar-toggle" class="rail-toggle" aria-label="Collapse sidebar">⟨</button>
+        <button type="button" id="sidebar-toggle" class="rail-toggle" data-action="toggle-sidebar" aria-label="Collapse sidebar">⟨</button>
       </div>
       <nav id="nav" aria-label="Sections"></nav>
       <div class="side-foot">
-        <span class="live" aria-hidden="true"></span>
-        <strong>RR TOOLS</strong>
-        <span class="ver">1.0.0</span>
+        <img src="assets/logos/rr-mark.svg" alt="">
+        <div>
+          <strong>After Effects</strong>
+          <span id="side-version" class="ver">Checking</span>
+        </div>
       </div>
     </aside>
     <div id="workspace">

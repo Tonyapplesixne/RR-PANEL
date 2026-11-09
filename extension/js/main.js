@@ -13,6 +13,7 @@
     outsideHost: false,
     query: "",
     categoryFilter: "",
+    sort: "name",
     favoritesOnly: false,
     detailId: ""
   };
@@ -379,6 +380,9 @@
         state.prefs.selected = state.prefs.selected.filter(function (id) { return known.indexOf(id) !== -1; });
       });
     },
+    "toggle-sidebar": function () {
+      document.getElementById("app").classList.toggle("rail");
+    },
     "reveal-extension": function () { reveal(state.paths.extension); },
     "reveal-presets": function () { reveal(state.paths.presets); },
     "reveal-my": function () { reveal(state.paths.my); },
@@ -392,8 +396,9 @@
   });
 
   document.body.addEventListener("change", function (event) {
-    if (event.target.id !== "category-filter") return;
-    state.categoryFilter = event.target.value;
+    if (event.target.id === "category-filter") state.categoryFilter = event.target.value;
+    else if (event.target.id === "sort-mode") state.sort = event.target.value === "date" ? "date" : "name";
+    else return;
     RR.view.render(state);
   });
 
