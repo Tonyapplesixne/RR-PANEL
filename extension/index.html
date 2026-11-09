@@ -10,39 +10,47 @@
   <div id="app">
     <aside id="sidebar">
       <div class="brand">
-        <img class="logo-full" src="assets/branding/logos/rr-crown.png" alt="RR TOOLS">
-        <img class="logo-compact" src="assets/branding/logos/rr-crown.png" alt="RR TOOLS">
+        <img class="logo" src="assets/branding/logos/rr-crown.png" alt="">
         <div class="brand-copy">
           <strong>RR TOOLS</strong>
           <em>After Effects Toolkit</em>
         </div>
-        <button type="button" id="sidebar-toggle" class="rail-toggle" data-action="toggle-sidebar" aria-label="Expand sidebar"><span class="when-compact">⟩</span><span class="when-wide">⟨</span></button>
       </div>
       <nav id="nav" aria-label="Sections"></nav>
       <div class="side-foot">
-        <img src="assets/branding/logos/rr-crown.png" alt="">
-        <div>
-          <strong>After Effects</strong>
-          <span id="side-version" class="ver">Checking</span>
-        </div>
+        <strong>RR TOOLS</strong>
+        <span class="ver">v1.0.0</span>
       </div>
     </aside>
     <div id="workspace">
       <header class="topbar">
-        <div class="top-brand">
-          <img class="top-logo" src="assets/branding/logos/rr-crown.png" alt="">
-          <div class="top-lockup">
-            <strong>RR TOOLS</strong>
-            <em>After Effects Toolkit</em>
-          </div>
+        <h1 id="page-title">Home</h1>
+        <label class="search-wrap">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M16 16l4 4"></path></svg>
+          <input id="preset-search" type="search" placeholder="Search presets..." aria-label="Search presets" autocomplete="off">
+          <kbd>Ctrl K</kbd>
+        </label>
+        <div class="top-tools">
+          <div id="host-pill" class="pill" role="status">Checking</div>
+          <button type="button" id="notice-bell" class="icon-btn" data-action="show-notice" aria-label="Notifications" title="No notifications">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2H4.5z"></path><path d="M10 19a2 2 0 0 0 4 0"></path></svg>
+          </button>
+          <button type="button" class="icon-btn" data-action="nav" data-section="settings" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"></path></svg>
+          </button>
         </div>
-        <div id="host-pill" class="pill">Checking</div>
       </header>
       <div id="notice" class="notice" hidden></div>
       <div id="stage">
         <main id="view"></main>
         <aside id="detail"></aside>
       </div>
+    </div>
+  </div>
+  <div id="palette" class="palette" hidden>
+    <div class="palette-card" role="dialog" aria-modal="true" aria-label="Commands">
+      <input id="palette-search" type="search" placeholder="Search commands..." aria-label="Search commands" autocomplete="off">
+      <div id="palette-list" role="listbox"></div>
     </div>
   </div>
   <script src="js/CSInterface.js"></script>

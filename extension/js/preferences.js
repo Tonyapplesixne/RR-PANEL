@@ -1,6 +1,6 @@
 (function (root) {
   var RR = root.RRTools = root.RRTools || {};
-  var SECTIONS = ["home", "presets", "categories", "favorites", "my", "tools", "settings"];
+  var SECTIONS = ["home", "presets", "categories", "favorites", "recent", "my", "tools", "settings"];
 
   function uniqueStrings(value) {
     var list = [];
@@ -23,8 +23,23 @@
       myPresetFiles: [],
       bundlePresetsPath: "",
       viewMode: "grid",
-      section: "home"
+      section: "home",
+      recent: [],
+      motion: true
     };
+  }
+
+  function recentList(value) {
+    var list = [];
+    var seen = {};
+    if (!value || typeof value.length !== "number") return list;
+    for (var i = 0; i < value.length && list.length < 20; i++) {
+      var item = value[i];
+      if (!item || typeof item.id !== "string" || !item.id || seen[item.id]) continue;
+      seen[item.id] = true;
+      list.push({ id: item.id, at: typeof item.at === "number" && isFinite(item.at) ? item.at : 0 });
+    }
+    return list;
   }
 
   function normalize(raw) {
@@ -39,7 +54,9 @@
       myPresetFiles: uniqueStrings(data.myPresetFiles),
       bundlePresetsPath: typeof data.bundlePresetsPath === "string" ? data.bundlePresetsPath : "",
       viewMode: data.viewMode === "list" ? "list" : "grid",
-      section: section
+      section: section,
+      recent: recentList(data.recent),
+      motion: data.motion === false ? false : true
     };
   }
 

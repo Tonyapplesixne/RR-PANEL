@@ -22,10 +22,20 @@
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new Error("sidecar must be a JSON object");
       }
+      var tags = [];
+      if (Array.isArray(parsed.tags)) {
+        parsed.tags.forEach(function (tag) {
+          if (tags.length >= 8 || typeof tag !== "string") return;
+          var clean = tag.trim();
+          if (clean && tags.indexOf(clean) === -1) tags.push(clean);
+        });
+      }
       return {
         name: typeof parsed.name === "string" ? parsed.name.trim() : "",
         description: typeof parsed.description === "string" ? parsed.description.trim() : "",
-        category: typeof parsed.category === "string" ? parsed.category.trim() : ""
+        category: typeof parsed.category === "string" ? parsed.category.trim() : "",
+        tags: tags,
+        version: typeof parsed.version === "string" ? parsed.version.trim() : ""
       };
     } catch (err) {
       warnings.push("Ignored invalid sidecar for " + presetPath + ": " + err.message);
@@ -97,6 +107,8 @@
         name: meta.name || util.prettyName(entry.name),
         category: category,
         description: meta.description || "",
+        tags: meta.tags || [],
+        version: meta.version || "",
         filePath: entry.path,
         relativePath: relativePath,
         previewPath: previewName ? util.join(rootPath, previewName) : "",
@@ -175,6 +187,8 @@
         name: meta.name || util.prettyName(fileName),
         category: meta.category || folderCategory(directory),
         description: meta.description || "",
+        tags: meta.tags || [],
+        version: meta.version || "",
         filePath: filePath,
         relativePath: filePath,
         previewPath: lookedUp.previewPath,

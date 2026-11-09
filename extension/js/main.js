@@ -15,7 +15,13 @@
     categoryFilter: "",
     sort: "name",
     favoritesOnly: false,
-    detailId: ""
+    detailId: "",
+    paletteOpen: false,
+    paletteQuery: "",
+    paletteIndex: 0,
+    resultIndex: 0,
+    popId: "",
+    scanning: false
   };
   var cs = null;
   var bridge = null;
@@ -93,8 +99,23 @@
   }
 
   function refresh() {
-    scan();
+    state.scanning = true;
     RR.view.render(state);
+    setTimeout(function () {
+      scan();
+      state.scanning = false;
+      RR.view.render(state);
+    }, 16);
+  }
+
+  function rememberRecent(presets) {
+    var now = Date.now();
+    var ids = {};
+    presets.forEach(function (preset) { ids[preset.id] = true; });
+    var rest = (state.prefs.recent || []).filter(function (item) { return !ids[item.id]; });
+    state.prefs.recent = presets.map(function (preset) {
+      return { id: preset.id, at: now };
+    }).concat(rest).slice(0, 20);
   }
 
   function probe() {
@@ -120,6 +141,10 @@
       state.busy = false;
       var message = result.message || "After Effects did not return an apply result.";
       if (result.ok && typeof result.time === "number") message += " Current time: " + result.time.toFixed(2) + "s.";
+      if (result.ok) {
+        rememberRecent(presets);
+        savePrefs(false);
+      }
       notify(result.ok ? "ok" : "error", result.code || "APPLY_FAILED", message, failureDetail(result));
       probe();
     });
@@ -215,6 +240,9 @@
     if (match) {
       state.prefs.favorites = RR.preferences.replaceId(state.prefs.favorites, preset.id, match.id);
       state.prefs.selected = RR.preferences.replaceId(state.prefs.selected, preset.id, match.id);
+      state.prefs.recent = (state.prefs.recent || []).map(function (item) {
+        return item.id === preset.id ? { id: match.id, at: item.at } : item;
+      });
       state.detailId = match.id;
     }
     if (savePrefs(false)) {
@@ -239,6 +267,7 @@
     });
     state.prefs.favorites = state.prefs.favorites.filter(function (id) { return id !== preset.id; });
     state.prefs.selected = state.prefs.selected.filter(function (id) { return id !== preset.id; });
+    state.prefs.recent = (state.prefs.recent || []).filter(function (item) { return item.id !== preset.id; });
     if (state.detailId === preset.id) state.detailId = "";
     if (savePrefs(false)) {
       state.notice = { kind: "ok", code: "DELETED", message: "Deleted " + preset.name + ".", detail: "" };
@@ -262,8 +291,45 @@
       state.query = "";
       state.categoryFilter = "";
       state.favoritesOnly = false;
+      state.resultIndex = 0;
+      state.paletteOpen = false;
       savePrefs(false);
       RR.view.render(state);
+    },
+    "open-category": function (button) {
+      state.section = "presets";
+      state.categoryFilter = button.getAttribute("data-category") || "";
+      state.query = "";
+      state.resultIndex = 0;
+      RR.view.render(state);
+    },
+    "clear-search": function () {
+      state.query = "";
+      state.resultIndex = 0;
+      RR.view.render(state);
+    },
+    "show-notice": function () {
+      var notice = document.getElementById("notice");
+      if (notice && !notice.hidden) notice.scrollIntoView({ block: "nearest" });
+    },
+    "close-palette": function () {
+      state.paletteOpen = false;
+      RR.view.render(state);
+    },
+    "palette-run": function (button) {
+      var command = button.getAttribute("data-command") || "";
+      state.paletteOpen = false;
+      state.paletteQuery = "";
+      if (command.indexOf("nav:") === 0) {
+        state.section = command.slice(4);
+        state.query = "";
+        state.categoryFilter = "";
+        savePrefs(false);
+        RR.view.render(state);
+        return;
+      }
+      var action = actions[command];
+      if (action) action(button);
     },
     inspect: function (button) {
       var id = button.getAttribute("data-id");
@@ -311,7 +377,13 @@
     },
     "toggle-favorite": function (button) {
       var id = button.getAttribute("data-id");
+      state.popId = id;
       mutatePrefs(function () { state.prefs.favorites = RR.preferences.toggleId(state.prefs.favorites, id); });
+      setTimeout(function () {
+        if (state.popId !== id) return;
+        state.popId = "";
+        RR.view.render(state);
+      }, 200);
     },
     "select-category": function (button) {
       var category = button.getAttribute("data-category");
@@ -383,6 +455,7 @@
       mutatePrefs(function () {
         state.prefs.favorites = state.prefs.favorites.filter(function (id) { return known.indexOf(id) !== -1; });
         state.prefs.selected = state.prefs.selected.filter(function (id) { return known.indexOf(id) !== -1; });
+        state.prefs.recent = (state.prefs.recent || []).filter(function (item) { return known.indexOf(item.id) !== -1; });
       });
     },
     "toggle-sidebar": function () {
@@ -398,19 +471,40 @@
   };
 
   document.body.addEventListener("input", function (event) {
+    if (event.target.id === "palette-search") {
+      state.paletteQuery = event.target.value;
+      state.paletteIndex = 0;
+      RR.view.render(state);
+      return;
+    }
     if (event.target.id !== "preset-search") return;
     state.query = event.target.value;
+    state.resultIndex = 0;
+    if (state.query && (state.section === "home" || state.section === "tools" || state.section === "settings")) {
+      state.section = "presets";
+    }
     RR.view.render(state);
   });
 
   document.body.addEventListener("change", function (event) {
+    if (event.target.id === "motion-toggle") {
+      state.prefs.motion = !!event.target.checked;
+      if (savePrefs(false)) RR.view.render(state);
+      return;
+    }
     if (event.target.id === "category-filter") state.categoryFilter = event.target.value;
     else if (event.target.id === "sort-mode") state.sort = event.target.value === "date" ? "date" : "name";
     else return;
+    state.resultIndex = 0;
     RR.view.render(state);
   });
 
   document.body.addEventListener("click", function (event) {
+    if (event.target.id === "palette") {
+      state.paletteOpen = false;
+      RR.view.render(state);
+      return;
+    }
     var button = event.target.closest("[data-action]");
     if (!button || button.disabled) return;
     if (button.getAttribute("data-action") === "inspect") {
@@ -421,11 +515,77 @@
     if (action) action(button);
   });
 
+  function typingTarget(event) {
+    var tag = event.target && event.target.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  }
+
   document.addEventListener("keydown", function (event) {
-    if (event.key !== "Escape" || !state.detailId) return;
-    if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.tagName === "SELECT")) return;
-    state.detailId = "";
-    RR.view.render(state);
+    var mod = event.ctrlKey || event.metaKey;
+    if (mod && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      state.paletteOpen = !state.paletteOpen;
+      state.paletteQuery = "";
+      state.paletteIndex = 0;
+      RR.view.render(state);
+      if (state.paletteOpen) {
+        var paletteInput = document.getElementById("palette-search");
+        if (paletteInput) paletteInput.focus();
+      }
+      return;
+    }
+    if (state.paletteOpen) {
+      var commands = document.querySelectorAll("#palette-list .command");
+      if (event.key === "Escape") {
+        state.paletteOpen = false;
+        RR.view.render(state);
+      } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        var step = event.key === "ArrowDown" ? 1 : -1;
+        var count = commands.length || 1;
+        state.paletteIndex = (state.paletteIndex + step + count) % count;
+        RR.view.render(state);
+        var again = document.getElementById("palette-search");
+        if (again) again.focus();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        var selected = document.querySelector("#palette-list .command.on");
+        if (selected) selected.click();
+      }
+      return;
+    }
+    if (event.key === "Escape") {
+      if (state.detailId && !typingTarget(event)) {
+        state.detailId = "";
+        RR.view.render(state);
+      } else if (state.query && event.target && event.target.id === "preset-search") {
+        state.query = "";
+        state.resultIndex = 0;
+        RR.view.render(state);
+      }
+      return;
+    }
+    if (!event.target || event.target.id !== "preset-search") return;
+    var cards = document.querySelectorAll("#view .preset-card");
+    if (!cards.length) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      var delta = event.key === "ArrowDown" ? 1 : -1;
+      state.resultIndex = Math.max(0, Math.min(cards.length - 1, state.resultIndex + delta));
+      RR.view.render(state);
+      var search = document.getElementById("preset-search");
+      if (search) {
+        search.focus();
+        var end = search.value.length;
+        search.setSelectionRange(end, end);
+      }
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      var card = cards[state.resultIndex] || cards[0];
+      if (!card) return;
+      state.detailId = card.getAttribute("data-id");
+      RR.view.render(state);
+    }
   });
 
   function boot() {
