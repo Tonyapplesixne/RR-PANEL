@@ -389,7 +389,19 @@
       "Import your .ffx files to get started.",
       null,
       { action: "add-files", label: "Add .ffx files" }
-    ).slice(1));
+    ).slice(1)).concat([quickTools()]);
+  }
+
+  function quickTools() {
+    return el("section", { class: "quick-tools" }, [
+      el("div", { class: "kicker", text: "Quick tools" }),
+      el("div", { class: "row-actions" }, [
+        el("button", { type: "button", "data-action": "add-files", text: "Add .ffx files" }),
+        el("button", { type: "button", "data-action": "nav", "data-section": "my", text: "My Presets" }),
+        el("button", { type: "button", "data-action": "nav", "data-section": "tools", text: "Tools" }),
+        el("button", { type: "button", "data-action": "nav", "data-section": "settings", text: "Settings" })
+      ])
+    ]);
   }
 
   function myActions(state) {
