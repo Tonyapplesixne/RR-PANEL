@@ -231,6 +231,7 @@
       class: "fallback tone-" + tone,
       title: "Generated artwork. This file has no preview image."
     });
+    plate.appendChild(el("span", { class: "fx", "aria-hidden": "true" }));
     plate.appendChild(icon(toneIcon(tone)));
     plate.appendChild(el("strong", { text: preset.name }));
     plate.appendChild(el("em", { text: "Artwork" }));
@@ -356,14 +357,6 @@
     return emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", path, { action: "rescan", label: "Rescan library" });
   }
 
-  function stat(label, value, note) {
-    return el("div", { class: "stat" }, [
-      el("span", { text: label }),
-      el("b", { text: String(value) }),
-      note ? el("small", { text: note }) : null
-    ]);
-  }
-
   function recentPresets(state, limit) {
     var known = knownMap(state.catalog.presets || []);
     var list = [];
@@ -377,8 +370,6 @@
   function renderHome(state) {
     var presets = state.catalog.presets || [];
     var known = knownMap(presets);
-    var favoriteCount = (state.prefs.favorites || []).filter(function (id) { return known[id]; }).length;
-    var recentCount = (state.prefs.recent || []).filter(function (item) { return known[item.id]; }).length;
     var featured = [];
     (state.prefs.favorites || []).forEach(function (id) {
       if (known[id] && featured.length < 4) featured.push(known[id]);
@@ -387,33 +378,37 @@
       if (featured.length >= 4) return;
       if (!featured.some(function (item) { return item.id === preset.id; })) featured.push(preset);
     });
+    var featuredBody = state.scanning
+      ? skeletonGrid()
+      : featured.length
+        ? el("div", { class: "preset-grid" }, featured.map(function (preset, index) { return presetCard(preset, state, index); }))
+        : emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", state.paths.presets || "", { action: "rescan", label: "Rescan library" });
     var nodes = [
       el("section", { class: "hero" }, [
+        el("div", { class: "hero-sky", "aria-hidden": "true" }),
         el("div", { class: "hero-copy" }, [
           el("p", { class: "eyebrow", text: "RR TOOLS" }),
-          el("h2", { text: "Welcome back" }),
-          el("p", { text: "Your motion toolkit is ready." }),
+          el("h2", {}, [
+            "Motion Library ",
+            el("em", { text: "for After Effects" })
+          ]),
+          el("p", { class: "hero-line", text: "Create. Animate. Repeat." }),
           el("div", { class: "hero-actions" }, [
             button("nav", "Browse presets", { class: "primary", "data-section": "presets" }),
             button("nav", "Explore tools", { "data-section": "tools" })
           ])
         ]),
-        el("img", { class: "hero-mark", src: "assets/branding/logos/rr-crown.png", alt: "" })
-      ]),
-      el("div", { class: "stats" }, [
-        stat("Presets", presets.length, "In the library"),
-        stat("Favorites", favoriteCount, favoriteCount ? "Starred here" : "None yet"),
-        stat("Recent", recentCount, recentCount ? "Applied from here" : "None yet"),
-        stat("Categories", categoriesOf(presets).length, "From your files")
+        el("div", { class: "hero-art" }, [
+          el("span", { class: "hero-glow", "aria-hidden": "true" }),
+          el("img", { class: "hero-mark", src: "assets/branding/logos/rr-crown.png", alt: "" })
+        ])
       ]),
       el("section", { class: "block" }, [
-        el("div", { class: "block-head" }, [el("h2", { text: "Quick actions" })]),
-        el("div", { class: "quick-grid" }, [
-          actionCard("nav", "presets", "grid", "Browse presets", "Open the library"),
-          actionCard("nav", "favorites", "star", "Favorites", "Presets you starred"),
-          actionCard("nav", "recent", "clock", "Recent", "Applied from this panel"),
-          actionCard("rescan", "", "refresh", "Rescan library", "Read the folders again")
-        ])
+        el("div", { class: "block-head" }, [
+          el("h2", { text: "Featured" }),
+          presets.length ? button("nav", "See all →", { class: "text-btn", "data-section": "presets" }) : null
+        ]),
+        featuredBody
       ])
     ];
     var recent = recentPresets(state, 3);
@@ -421,32 +416,53 @@
       nodes.push(el("section", { class: "block" }, [
         el("div", { class: "block-head" }, [
           el("h2", { text: "Recently used" }),
-          button("nav", "See all", { class: "text-btn", "data-section": "recent" })
+          button("nav", "See all →", { class: "text-btn", "data-section": "recent" })
         ]),
-        presetGrid(state, recent, null)
+        el("div", { class: "recent-strip" }, recent.map(function (preset, index) {
+          return recentRow(preset, state, index);
+        }))
       ]));
     }
     var groups = RR.catalog.groupByCategory(presets);
     if (groups.length) {
       nodes.push(el("section", { class: "block" }, [
-        el("div", { class: "block-head" }, [el("h2", { text: "Explore by category" })]),
+        el("div", { class: "block-head" }, [
+          el("h2", { text: "Explore by category" }),
+          button("nav", "See all →", { class: "text-btn", "data-section": "categories" })
+        ]),
         el("div", { class: "cat-grid" }, groups.map(function (group) {
           return categoryTile(group);
         }))
       ]));
     }
-    nodes.push(el("section", { class: "block" }, [
-      el("div", { class: "block-head" }, [
-        el("h2", { text: "Featured presets" }),
-        presets.length ? button("nav", "See all", { class: "text-btn", "data-section": "presets" }) : null
-      ]),
-      featured.length ? presetGrid(state, featured, null) : emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", state.paths.presets || "", { action: "rescan", label: "Rescan library" })
-    ]));
     return nodes;
+  }
+
+  function recentRow(preset, state, index) {
+    var url = previewUrl(preset);
+    var thumb = el("div", { class: "list-thumb" });
+    if (url) thumb.appendChild(el("img", { src: url, alt: "" }));
+    else thumb.appendChild(fallbackPlate(preset));
+    return el("article", {
+      class: "recent-row" + (state.detailId === preset.id ? " active" : ""),
+      "data-action": "inspect",
+      "data-id": preset.id,
+      "data-index": String(index)
+    }, [
+      thumb,
+      el("div", { class: "list-copy" }, [
+        el("h2", { text: preset.name }),
+        el("p", { text: ago(preset.usedAt) })
+      ]),
+      starButton(preset, state),
+      button("apply-one", "Apply", { class: "apply", "data-id": preset.id, disabled: state.busy ? "disabled" : null })
+    ]);
   }
 
   function categoryTile(group) {
     var tone = toneOf(group.category);
+    var swatch = el("span", { class: "cat-swatch", "aria-hidden": "true" });
+    swatch.appendChild(icon(toneIcon(tone)));
     return el("button", {
       type: "button",
       class: "cat-tile tone-" + tone,
@@ -454,24 +470,10 @@
       "data-category": group.category,
       title: group.category
     }, [
-      icon(toneIcon(tone)),
+      swatch,
       el("strong", { text: group.category }),
-      el("span", { text: group.presets.length + (group.presets.length === 1 ? " preset" : " presets") })
+      el("span", { class: "cat-count", text: group.presets.length + (group.presets.length === 1 ? " preset" : " presets") })
     ]);
-  }
-
-  function actionCard(action, section, glyph, title, copy) {
-    var node = el("button", {
-      type: "button",
-      class: "action-card",
-      "data-action": action,
-      "data-section": section || null
-    }, [
-      icon(glyph),
-      el("strong", { text: title }),
-      el("span", { text: copy })
-    ]);
-    return node;
   }
 
   function renderLibrary(state) {
@@ -696,6 +698,7 @@
     } else {
       var version = (state.host.payload && state.host.payload.version) || "";
       pill.className = "pill ready";
+      pill.appendChild(el("span", { class: "ae-mark", text: "Ae" }));
       pill.appendChild(dot);
       pill.appendChild(el("span", { text: "Connected" }));
       if (version) pill.appendChild(el("span", { class: "host-version", text: version }));

@@ -9,22 +9,21 @@
 <body>
   <div id="app">
     <aside id="sidebar">
-      <div class="brand">
-        <img class="logo" src="assets/branding/logos/rr-crown.png" alt="">
-        <div class="brand-copy">
-          <strong>RR TOOLS</strong>
-          <em>After Effects Toolkit</em>
-        </div>
-      </div>
       <nav id="nav" aria-label="Sections"></nav>
       <div class="side-foot">
-        <strong>RR TOOLS</strong>
         <span class="ver">v1.0.0</span>
       </div>
     </aside>
     <div id="workspace">
       <header class="topbar">
-        <h1 id="page-title">Home</h1>
+        <div class="brand">
+          <img class="logo" src="assets/branding/logos/rr-crown.png" alt="">
+          <div class="brand-copy">
+            <strong>RR TOOLS</strong>
+            <em>After Effects Toolkit</em>
+          </div>
+        </div>
+        <h1 id="page-title" class="sr-only">Home</h1>
         <label class="search-wrap">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M16 16l4 4"></path></svg>
           <input id="preset-search" type="search" placeholder="Search presets..." aria-label="Search presets" autocomplete="off">

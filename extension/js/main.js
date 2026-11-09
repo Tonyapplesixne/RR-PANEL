@@ -573,7 +573,7 @@
       return;
     }
     if (!event.target || event.target.id !== "preset-search") return;
-    var cards = document.querySelectorAll("#view .preset-card, #view .list-row");
+    var cards = document.querySelectorAll("#view .preset-card, #view .list-row, #view .recent-row");
     if (!cards.length) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
