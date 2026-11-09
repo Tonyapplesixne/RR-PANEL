@@ -183,15 +183,9 @@
   function presetCard(preset, state) {
     var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
     var active = state.detailId === preset.id;
-    var thumb = el("div", { class: "thumb", text: monogram(preset.name) });
     var url = previewUrl(preset);
-    if (url) {
-      thumb.style.backgroundImage = "url(\"" + url.replace(/"/g, "") + "\")";
-      thumb.textContent = "";
-    } else {
-      var tone = hue(preset.category || preset.name);
-      thumb.style.background = "linear-gradient(160deg, hsl(" + tone + ", 70%, 62%), hsl(" + ((tone + 24) % 360) + ", 55%, 28%))";
-    }
+    var thumb = el("div", { class: url ? "thumb cover-real" : "thumb cover-brand", title: url ? "Preview" : "Brand cover" });
+    thumb.style.backgroundImage = "url(\"" + (url || "assets/branding/backgrounds/card-art.png").replace(/"/g, "") + "\")";
     var copy = el("div", { class: "card-copy" }, [
       el("h2", { text: preset.name }),
       el("div", { class: "card-meta", text: sourceLabel(preset) + " · " + preset.category })
@@ -318,14 +312,13 @@
       compBody.push(el("div", { class: "code faint", text: payload.contextError.code }));
     } else if (payload.composition) {
       var comp = payload.composition;
-      compBody.push(el("strong", { text: comp.name }));
+      compBody.push(el("strong", { text: comp.name, title: payload.projectName || comp.name }));
       compBody.push(el("div", { class: "comp-meta" }, [
         el("span", { text: comp.width + " × " + comp.height }),
         el("span", { text: comp.frameRate + " fps" }),
         el("span", { text: comp.numLayers + " layers" }),
         el("span", { text: Number(comp.time).toFixed(2) + "s" })
       ]));
-      if (payload.projectName) compBody.push(el("div", { class: "faint", text: payload.projectName }));
     }
     var layerBody = [el("div", { class: "kicker", text: "Selected layer" })];
     if (payload.selectionError) {
@@ -348,11 +341,13 @@
     return el("div", { class: "host-split", id: "host-card" }, [
       el("section", { class: "host-card" }, [
         el("img", { class: "card-art", src: "assets/branding/backgrounds/card-art.png", alt: "" }),
-        el("div", { class: "comp-copy" }, compBody)
+        el("div", { class: "comp-copy" }, compBody),
+        el("img", { class: "host-decor", src: "assets/branding/backgrounds/banner.png", alt: "" })
       ]),
       el("section", { class: "host-card" }, [
         el("img", { class: "card-art", src: "assets/branding/backgrounds/card-art.png", alt: "" }),
-        el("div", { class: "comp-copy" }, layerBody)
+        el("div", { class: "comp-copy" }, layerBody),
+        el("img", { class: "host-decor", src: "assets/branding/backgrounds/banner.png", alt: "" })
       ])
     ]);
   }
@@ -392,14 +387,23 @@
     ).slice(1)).concat([quickTools()]);
   }
 
+  function pendingTool(label) {
+    return el("button", { type: "button", class: "pending", disabled: "disabled", title: "Pendiente" }, [
+      el("span", { text: label }),
+      el("small", { text: "Pendiente" })
+    ]);
+  }
+
   function quickTools() {
     return el("section", { class: "quick-tools" }, [
       el("div", { class: "kicker", text: "Quick tools" }),
-      el("div", { class: "row-actions" }, [
+      el("div", { class: "tool-grid" }, [
         el("button", { type: "button", "data-action": "add-files", text: "Add .ffx files" }),
-        el("button", { type: "button", "data-action": "nav", "data-section": "my", text: "My Presets" }),
-        el("button", { type: "button", "data-action": "nav", "data-section": "tools", text: "Tools" }),
-        el("button", { type: "button", "data-action": "nav", "data-section": "settings", text: "Settings" })
+        el("button", { type: "button", "data-action": "choose-my", text: "Add folder" }),
+        el("button", { type: "button", "data-action": "rescan", text: "Rescan" }),
+        pendingTool("Bind preset"),
+        pendingTool("Quick trim"),
+        pendingTool("Beat marker")
       ])
     ]);
   }

@@ -268,6 +268,16 @@ input[type="search"] {
   display: block;
   border: 1px solid rgba(176, 124, 255, 0.55);
 }
+.host-decor {
+  width: 64px;
+  height: 42px;
+  margin-left: auto;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(176, 124, 255, 0.4);
+  pointer-events: none;
+  flex: 0 0 auto;
+}
 .page-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
 
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; min-width: 0; }
@@ -291,7 +301,10 @@ input[type="search"] {
   border-radius: 12px;
   background: #07060c;
 }
-.quick-tools .row-actions { margin-top: 6px; }
+.tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.tool-grid button { width: 100%; min-width: 0; padding: 6px 4px; }
+.tool-grid button.pending { opacity: 0.62; }
+.tool-grid button.pending small { display: block; color: #8d849c; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
 
 .toolbar, .row-actions, .actions, .card-actions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .toolbar { flex-wrap: nowrap; min-width: 0; }
@@ -312,7 +325,11 @@ input[type="search"] {
 .toolbar select { width: 92px; max-width: 34%; min-width: 0; flex: 0 1 auto; padding: 4px 6px; height: 30px; }
 .icon-btn { width: 26px; height: 26px; padding: 0; flex: 0 0 auto; border-radius: 8px; }
 
-.preset-grid, .preset-list { display: grid; gap: 4px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.preset-grid, .preset-list { display: grid; gap: 6px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.preset-grid .preset-card { flex-direction: column; align-items: stretch; }
+.preset-grid .thumb { width: 100%; height: 72px; }
+.preset-grid .card-actions { margin-left: 0; justify-content: flex-end; }
 .preset-card {
   position: relative;
   display: flex;
@@ -329,8 +346,8 @@ input[type="search"] {
 .preset-card:hover { border-color: rgba(220, 196, 255, 0.78); }
 .preset-card.active { border-color: #e4d8ff; box-shadow: 0 0 0 1px rgba(214, 190, 255, 0.55), 0 8px 18px rgba(70, 30, 140, 0.32); }
 .thumb {
-  width: 36px;
-  height: 28px;
+  width: 64px;
+  height: 42px;
   flex: 0 0 auto;
   border-radius: 6px;
   display: grid;
