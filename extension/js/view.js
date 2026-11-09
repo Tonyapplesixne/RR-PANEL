@@ -573,7 +573,17 @@
     if (RR.cepfs && RR.cepfs.available && RR.cepfs.available()) size = formatSize(RR.cepfs.create().statSize(preset.filePath));
     var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
     detail.appendChild(el("section", { class: "detail-card" }, [
-      el("div", { class: "faint", text: "FFX" }),
+      el("div", { class: "detail-head" }, [
+        el("div", { class: "faint", text: "FFX" }),
+        el("button", {
+          type: "button",
+          class: "detail-close",
+          "data-action": "close-detail",
+          "aria-label": "Close",
+          title: "Close",
+          text: "×"
+        })
+      ]),
       el("h2", { text: preset.name }),
       preset.description ? el("p", { text: preset.description }) : null,
       el("p", { class: "muted", text: "Category" }),

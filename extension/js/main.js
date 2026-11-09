@@ -266,7 +266,12 @@
       RR.view.render(state);
     },
     inspect: function (button) {
-      state.detailId = button.getAttribute("data-id");
+      var id = button.getAttribute("data-id");
+      state.detailId = state.detailId === id ? "" : id;
+      RR.view.render(state);
+    },
+    "close-detail": function () {
+      state.detailId = "";
       RR.view.render(state);
     },
     "set-view": function (button) {
@@ -408,8 +413,19 @@
   document.body.addEventListener("click", function (event) {
     var button = event.target.closest("[data-action]");
     if (!button || button.disabled) return;
+    if (button.getAttribute("data-action") === "inspect") {
+      var nested = event.target.closest("button, summary, a, input, select");
+      if (nested && nested !== button) return;
+    }
     var action = actions[button.getAttribute("data-action")];
     if (action) action(button);
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key !== "Escape" || !state.detailId) return;
+    if (event.target && (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.tagName === "SELECT")) return;
+    state.detailId = "";
+    RR.view.render(state);
   });
 
   function boot() {
