@@ -245,7 +245,13 @@ button.text-btn { background: transparent; border-color: transparent; color: var
 
 .library-bar { display: flex; gap: 6px; align-items: center; }
 .library-bar select { height: 32px; min-width: 0; flex: 1; }
-.preset-grid, .preset-list { display: grid; gap: 8px; grid-template-columns: 1fr; }
+.preset-grid, .preset-list { display: grid; gap: 10px; align-items: start; justify-content: start; }
+.preset-list { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }
+.preset-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 180px));
+}
+.preset-grid .preset-card { width: 100%; max-width: 180px; height: auto; align-self: start; }
+.preset-grid .preview { aspect-ratio: 16 / 9; flex: none; height: auto; }
 .preset-card {
   display: flex;
   flex-direction: column;
@@ -355,10 +361,6 @@ button.text-btn { background: transparent; border-color: transparent; color: var
   #sidebar { width: var(--side-wide); flex-basis: var(--side-wide); }
   .brand-copy, .side-foot, #nav button span { display: block; }
   #nav button { width: 100%; height: auto; justify-content: flex-start; padding: 7px 8px; }
-  .preset-grid { grid-template-columns: 1fr 1fr; }
-}
-@container (min-width: 860px) {
-  .preset-grid { grid-template-columns: 1fr 1fr 1fr; }
 }
 @container (max-width: 520px) {
   .topbar { grid-template-columns: 1fr auto; }
