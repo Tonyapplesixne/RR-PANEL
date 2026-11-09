@@ -362,7 +362,7 @@
       el("img", { class: "banner-logo", src: "assets/branding/logos/rr-crown.png", alt: "" }),
       el("div", { class: "banner-copy" }, [
         el("div", { class: "kicker", text: "Welcome to" }),
-        el("img", { class: "banner-word", src: "assets/branding/logos/rr-wordmark-title.png", alt: "RR TOOLS" }),
+        el("h1", { text: "RR TOOLS" }),
         el("p", { text: "Your creative workspace." }),
         el("p", { class: "faint", text: "Edit faster. Create more." })
       ])
