@@ -2,13 +2,13 @@
   var RR = root.RRTools = root.RRTools || {};
   var NS = "http://www.w3.org/2000/svg";
   var NAV = [
-    ["home", "Home", "M2.5 7.2 8 2.8l5.5 4.4V13.5H10V9.5H6v4H2.5Z"],
-    ["presets", "Presets", "M3 3.5h10v2.2H3Zm0 3.4h10v2.2H3Zm0 3.4h10V13.5H3Z"],
-    ["categories", "Categories", "M2.5 2.5h4.2v4.2H2.5Zm6.8 0H13.5v4.2H9.3ZM2.5 9.3h4.2V13.5H2.5Zm6.8 0H13.5V13.5H9.3Z"],
-    ["favorites", "Favorites", "M8 2.2 9.6 5.7l3.8.4-2.8 2.6.8 3.8L8 10.7 4.6 12.5l.8-3.8L2.6 6.1l3.8-.4Z"],
-    ["my", "My Presets", "M2.2 4.2h4l1.2 1.3H13.8V12.8H2.2Z"],
-    ["tools", "Tools", "M2.5 8h11M8 2.5v11M4 4l8 8M12 4l-8 8"],
-    ["settings", "Settings", "M3 4.5h10M3 8h10M3 11.5h10M6 3.2v2.6M10 6.7v2.6M7.5 10.2v2.6"]
+    ["home", "Home", "assets/branding/icons/nav-home.png"],
+    ["presets", "Presets", "assets/branding/icons/nav-presets.png"],
+    ["categories", "Categories", "assets/branding/icons/nav-categories.png"],
+    ["favorites", "Favorites", "assets/branding/icons/nav-favorites.png"],
+    ["my", "My Presets", "assets/branding/icons/nav-my.png"],
+    ["tools", "Tools", "assets/branding/icons/nav-tools.png"],
+    ["settings", "Settings", "assets/branding/icons/nav-settings.png"]
   ];
   var previewCache = {};
   var mtimeCache = {};
@@ -150,8 +150,25 @@
     return value;
   }
 
-  function stat(value, label) {
-    return el("div", { class: "stat" }, [el("b", { text: String(value) }), el("span", { text: label })]);
+  function stat(value, label, icon) {
+    return el("div", { class: "stat" }, [
+      icon ? el("img", { src: icon, alt: "" }) : null,
+      el("div", {}, [el("b", { text: String(value) }), el("span", { text: label })])
+    ]);
+  }
+
+  function shot(action, kind, label, extra) {
+    var attrs = {
+      class: "shot " + kind,
+      type: "button",
+      "data-action": action,
+      "aria-label": label,
+      title: label
+    };
+    if (extra) {
+      Object.keys(extra).forEach(function (key) { attrs[key] = extra[key]; });
+    }
+    return el("button", attrs);
   }
 
   function emptyState(title, copy, action) {
@@ -179,24 +196,16 @@
       el("h2", { text: preset.name }),
       el("div", { class: "card-meta", text: sourceLabel(preset) + " · " + preset.category })
     ]);
-    var apply = el("button", {
-      type: "button",
-      "data-action": "apply-one",
+    var apply = shot("apply-one", "apply", "Apply", {
       "data-id": preset.id,
-      disabled: state.busy ? "disabled" : null,
-      text: "Apply"
+      disabled: state.busy ? "disabled" : null
     });
-    var star = el("button", {
-      class: "star",
-      type: "button",
-      "data-action": "toggle-favorite",
+    var star = shot("toggle-favorite", "star" + (favorite ? " on" : ""), favorite ? "Remove favorite" : "Add favorite", {
       "data-id": preset.id,
-      "aria-pressed": favorite ? "true" : "false",
-      "aria-label": favorite ? "Remove favorite" : "Add favorite",
-      text: favorite ? "★" : "☆"
+      "aria-pressed": favorite ? "true" : "false"
     });
-    var menu = el("details", { class: "more", "data-action": "menu" }, [
-      el("summary", { "aria-label": "Preset options", text: "···" }),
+    var menu = el("details", { class: "more" }, [
+      el("summary", { class: "shot more-btn", "aria-label": "Preset options", title: "Options" }),
       el("div", { class: "menu" }, [
         el("button", { type: "button", "data-action": "reveal-preset", "data-id": preset.id, text: "Open folder" }),
         el("button", { type: "button", "data-action": "rename-preset", "data-id": preset.id, text: "Rename" }),
@@ -217,55 +226,45 @@
     });
     categories.sort(function (a, b) { return a.localeCompare(b); });
     var select = el("select", { id: "category-filter", "aria-label": "Category" }, [
-      el("option", { value: "", text: "All" })
+      el("option", { value: "", text: "All categories" })
     ]);
     categories.forEach(function (category) {
       var option = el("option", { value: category, text: category });
       if (category === state.categoryFilter) option.selected = true;
       select.appendChild(option);
     });
-    var search = el("input", {
-      id: "preset-search",
-      class: "search",
-      type: "search",
-      placeholder: "Search presets",
-      value: state.query || ""
-    });
+    var search = el("label", { class: "search-wrap" }, [
+      el("img", { src: "assets/branding/icons/search.png", alt: "" }),
+      el("input", {
+        id: "preset-search",
+        class: "search",
+        type: "search",
+        placeholder: "Search presets...",
+        value: state.query || ""
+      })
+    ]);
     var nodes = [
       search,
       select,
       el("button", {
-        class: "icon-btn",
+        class: "shot favorites" + (state.favoritesOnly ? " on" : ""),
         type: "button",
         "data-action": "toggle-fav-filter",
         "aria-pressed": state.favoritesOnly ? "true" : "false",
         "aria-label": "Favorites",
-        title: "Favorites",
-        text: "★"
+        title: "Favorites"
       }),
       el("select", { id: "sort-mode", "aria-label": "Sort" }, [
         el("option", { value: "name", text: "Name", selected: state.sort !== "date" ? "selected" : null }),
         el("option", { value: "date", text: "Date", selected: state.sort === "date" ? "selected" : null })
       ]),
-      el("button", {
-        class: "icon-btn",
-        type: "button",
-        "data-action": "set-view",
+      shot("set-view", "grid" + (state.prefs.viewMode === "list" ? "" : " on"), "Grid", {
         "data-mode": "grid",
-        "aria-pressed": state.prefs.viewMode === "list" ? "false" : "true",
-        "aria-label": "Grid",
-        title: "Grid",
-        text: "▦"
+        "aria-pressed": state.prefs.viewMode === "list" ? "false" : "true"
       }),
-      el("button", {
-        class: "icon-btn",
-        type: "button",
-        "data-action": "set-view",
+      shot("set-view", "list" + (state.prefs.viewMode === "list" ? " on" : ""), "List", {
         "data-mode": "list",
-        "aria-pressed": state.prefs.viewMode === "list" ? "true" : "false",
-        "aria-label": "List",
-        title: "List",
-        text: "☰"
+        "aria-pressed": state.prefs.viewMode === "list" ? "true" : "false"
       })
     ];
     return el("div", { class: "toolbar" }, nodes);
@@ -281,10 +280,10 @@
     var nodes = [
       el("div", { class: "page-head" }, [el("h1", { text: title }), el("p", { text: subtitle })]),
       el("div", { class: "stats" }, [
-        stat(presets.length, "Presets"),
-        stat(favoriteCount, "Favorites"),
-        stat(Object.keys(categories).length, "Categories"),
-        stat(layerCount(state), "Selected layers")
+        stat(presets.length, "Presets", "assets/branding/icons/nav-presets.png"),
+        stat(favoriteCount, "Favorites", "assets/branding/icons/nav-favorites.png"),
+        stat(Object.keys(categories).length, "Categories", "assets/branding/icons/nav-categories.png"),
+        stat(layerCount(state), "Selected layers", "assets/branding/buttons/list.png")
       ]),
       extra || null,
       toolbar(state, presets)
@@ -348,11 +347,11 @@
     ]));
     return el("div", { class: "host-split", id: "host-card" }, [
       el("section", { class: "host-card" }, [
-        el("img", { class: "card-logo", src: "assets/logos/rr-mark.png", alt: "" }),
+        el("img", { class: "card-art", src: "assets/branding/backgrounds/card-art.png", alt: "" }),
         el("div", { class: "comp-copy" }, compBody)
       ]),
       el("section", { class: "host-card" }, [
-        el("img", { class: "card-logo", src: "assets/logos/rr-mark.png", alt: "" }),
+        el("img", { class: "card-art", src: "assets/branding/backgrounds/card-art.png", alt: "" }),
         el("div", { class: "comp-copy" }, layerBody)
       ])
     ]);
@@ -360,19 +359,12 @@
 
   function welcomeBanner() {
     return el("section", { class: "banner" }, [
-      el("img", { class: "banner-logo", src: "assets/logos/rr-mark.png", alt: "" }),
+      el("img", { class: "banner-logo", src: "assets/branding/logos/rr-crown.png", alt: "" }),
       el("div", { class: "banner-copy" }, [
         el("div", { class: "kicker", text: "Welcome to" }),
-        el("h1", { text: "RR TOOLS" }),
+        el("img", { class: "banner-word", src: "assets/branding/logos/rr-wordmark-title.png", alt: "RR TOOLS" }),
         el("p", { text: "Your creative workspace." }),
         el("p", { class: "faint", text: "Edit faster. Create more." })
-      ]),
-      el("div", { class: "quick" }, [
-        el("div", { class: "kicker", text: "Quick Access" }),
-        el("button", { type: "button", "data-action": "nav", "data-section": "presets", text: "Open Presets" }),
-        el("button", { type: "button", "data-action": "nav", "data-section": "tools", text: "Quick Tools" }),
-        el("button", { type: "button", "data-action": "toggle-sidebar", text: "Sidebar" }),
-        el("button", { type: "button", "data-action": "nav", "data-section": "settings", text: "Settings" })
       ])
     ]);
   }
@@ -385,8 +377,8 @@
       })));
     }
     nodes.push(el("div", { class: "row-actions" }, [
-      el("button", { class: "primary", type: "button", "data-action": "apply-selected", disabled: state.busy ? "disabled" : null, text: "Apply selected" }),
-      el("button", { class: "ghost", type: "button", "data-action": "rescan", text: "Rescan" })
+      shot("apply-selected", "apply-selected", "Apply selected", { disabled: state.busy ? "disabled" : null }),
+      shot("rescan", "rescan", "Rescan")
     ]));
     return nodes.concat(presetBrowser(
       state,
@@ -409,9 +401,9 @@
     if (added) menuItems.push(el("button", { type: "button", "data-action": "clear-files", text: "Clear added files" }));
     return el("div", { class: "row-actions" }, [
       el("button", { class: "primary", type: "button", "data-action": "add-files", text: "Add .ffx files" }),
-      el("button", { class: "icon-btn", type: "button", "data-action": "rescan", "aria-label": "Rescan", title: "Rescan", text: "↻" }),
+      shot("rescan", "rescan", "Rescan"),
       el("details", { class: "more" }, [
-        el("summary", { "aria-label": "Import options", title: "Import options", text: "···" }),
+        el("summary", { class: "shot more-btn", "aria-label": "Import options", title: "Import options" }),
         el("div", { class: "menu" }, menuItems)
       ])
     ]);
@@ -634,14 +626,17 @@
     var sideVersion = document.getElementById("side-version");
     if (state.host.status === "error") {
       pill.className = "pill error";
-      pill.appendChild(el("span", { class: "ae", text: "Ae" }));
+      pill.appendChild(el("img", { class: "ae-badge", src: "assets/branding/icons/ae-badge.png", alt: "" }));
+      pill.appendChild(el("span", { class: "ae-name", text: "After Effects" }));
       pill.appendChild(el("span", { class: "conn", text: "Disconnected" }));
       if (sideVersion) sideVersion.textContent = "Disconnected";
     } else {
       var version = (state.host.payload && state.host.payload.version) || "";
       pill.className = "pill ready";
-      pill.appendChild(el("span", { class: "ae", text: "Ae" }));
+      pill.appendChild(el("img", { class: "ae-badge", src: "assets/branding/icons/ae-badge.png", alt: "" }));
+      pill.appendChild(el("span", { class: "ae-name", text: "After Effects" }));
       pill.appendChild(el("span", { class: "faint", text: version ? "v" + version : "" }));
+      pill.appendChild(el("img", { class: "status-dot", src: "assets/branding/icons/status-dot.png", alt: "" }));
       pill.appendChild(el("span", { class: "conn", text: "Connected" }));
       if (sideVersion) sideVersion.textContent = version || "Connected";
     }
@@ -684,7 +679,7 @@
     clear(nav);
     NAV.forEach(function (item) {
       var button = el("button", { type: "button", "data-action": "nav", "data-section": item[0], title: item[1], "aria-label": item[1] });
-      button.appendChild(icon(item[2]));
+      button.appendChild(el("img", { src: item[2], alt: "" }));
       button.appendChild(el("span", { text: item[1] }));
       if (item[0] === "my") button.appendChild(el("span", { class: "count", text: "0" }));
       nav.appendChild(button);
