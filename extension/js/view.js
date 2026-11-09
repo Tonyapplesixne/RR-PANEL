@@ -133,8 +133,13 @@
     return el("div", { class: "stat" }, [el("b", { text: String(value) }), el("span", { text: label })]);
   }
 
-  function emptyState(title, copy) {
-    return el("section", { class: "empty" }, [el("h2", { text: title }), el("p", { text: copy })]);
+  function emptyState(title, copy, action) {
+    return el("section", { class: "empty" }, [
+      el("div", { class: "empty-mark", "aria-hidden": "true" }),
+      el("h2", { text: title }),
+      el("p", { text: copy }),
+      action ? el("button", { class: "primary", type: "button", "data-action": action.action, text: action.label }) : null
+    ]);
   }
 
   function presetCard(preset, state) {
@@ -224,7 +229,7 @@
     return el("div", { class: "toolbar" }, nodes);
   }
 
-  function presetBrowser(state, title, subtitle, presets, emptyTitle, emptyCopy, extra) {
+  function presetBrowser(state, title, subtitle, presets, emptyTitle, emptyCopy, extra, emptyAction) {
     var shown = filteredPresets(state, presets);
     var categories = {};
     presets.forEach(function (preset) { categories[preset.category] = true; });
@@ -242,7 +247,7 @@
       extra || null,
       toolbar(state, presets)
     ];
-    if (!shown.length) nodes.push(emptyState(emptyTitle, emptyCopy));
+    if (!shown.length) nodes.push(emptyState(emptyTitle, emptyCopy, emptyAction));
     else {
       var grid = el("div", { class: state.prefs.viewMode === "list" ? "preset-list" : "preset-grid" });
       shown.forEach(function (preset) { grid.appendChild(presetCard(preset, state)); });
@@ -266,27 +271,45 @@
       ]);
     }
     var payload = host.payload || {};
-    var children = [el("h2", { text: "Composition" })];
+    var children = [];
     if (payload.contextError) {
-      children.push(el("p", { text: payload.contextError.message }));
-      children.push(el("div", { class: "code faint", text: payload.contextError.code }));
+      children.push(el("div", { class: "comp-row" }, [
+        el("div", { class: "comp-mark", text: "AE" }),
+        el("div", {}, [
+          el("div", { class: "kicker", text: "Composition" }),
+          el("p", { class: "warn", text: payload.contextError.message }),
+          el("div", { class: "code faint", text: payload.contextError.code })
+        ])
+      ]));
     } else if (payload.composition) {
       var comp = payload.composition;
-      children.push(el("p", { text: comp.name }));
-      children.push(el("p", { class: "muted", text: comp.width + "×" + comp.height + " · " + comp.frameRate + " fps · " + comp.numLayers + " layers · " + Number(comp.time).toFixed(2) + "s" }));
-      if (payload.projectName) children.push(el("p", { class: "faint", text: payload.projectName }));
+      children.push(el("div", { class: "comp-row" }, [
+        el("div", { class: "comp-mark", text: "AE" }),
+        el("div", { class: "comp-copy" }, [
+          el("div", { class: "kicker", text: "Composition" }),
+          el("strong", { text: comp.name }),
+          el("div", { class: "comp-meta" }, [
+            el("span", { text: comp.width + " × " + comp.height }),
+            el("span", { text: comp.frameRate + " fps" }),
+            el("span", { text: comp.numLayers + " layers" }),
+            el("span", { text: Number(comp.time).toFixed(2) + "s" })
+          ]),
+          payload.projectName ? el("div", { class: "faint", text: payload.projectName }) : null
+        ])
+      ]));
     }
     if (payload.selectionError) {
-      children.push(el("p", { class: "warn", text: payload.selectionError.message }));
+      children.push(el("p", { class: "warn layer-note", text: payload.selectionError.message }));
     } else if (payload.selectedLayers && payload.selectedLayers.length) {
-      var list = el("ul", { class: "layers" });
+      var row = el("div", { class: "layer-row" });
       payload.selectedLayers.forEach(function (layer) {
-        list.appendChild(el("li", {}, [
-          el("span", { text: layer.name }),
-          el("span", { class: "faint", text: "#" + layer.index })
+        row.appendChild(el("div", { class: "layer-chip" }, [
+          el("strong", { text: layer.name }),
+          el("span", { text: "#" + layer.index }),
+          el("span", { class: "kind", text: layer.kind || "Layer" })
         ]));
       });
-      children.push(list);
+      children.push(row);
     }
     children.push(el("div", { class: "actions" }, [
       el("button", {
@@ -302,9 +325,9 @@
         "data-kind": "solid",
         disabled: state.busy ? "disabled" : null,
         text: "Solid"
-      })
+      }),
+      el("p", { class: "faint hint", text: "Copies the selected layer's width, height, and in/out points. The solid is white." })
     ]));
-    children.push(el("p", { class: "faint", text: "Copies the selected layer's width, height, and in/out points. The solid is white." }));
     return el("section", { class: "host-card", id: "host-card" }, children);
   }
 
@@ -316,16 +339,18 @@
       })));
     }
     nodes.push(el("div", { class: "row-actions" }, [
-      el("button", { type: "button", "data-action": "apply-selected", disabled: state.busy ? "disabled" : null, text: "Apply selected" }),
-      el("button", { type: "button", "data-action": "rescan", text: "Rescan" })
+      el("button", { class: "primary", type: "button", "data-action": "apply-selected", disabled: state.busy ? "disabled" : null, text: "Apply selected" }),
+      el("button", { class: "ghost", type: "button", "data-action": "rescan", text: "Rescan" })
     ]));
     return nodes.concat(presetBrowser(
       state,
       "Home",
-      "Presets found on this computer. Counts come from the scan and the live After Effects selection.",
+      "Presets found on this computer.",
       state.catalog.presets,
       "No presets yet",
-      "The library folder has no .ffx files. Add files from My Presets. RR TOOLS does not ship sample presets."
+      "The library folder has no .ffx files.",
+      null,
+      { action: "add-files", label: "Add .ffx files" }
     ).slice(1));
   }
 
@@ -588,6 +613,7 @@
     renderBody(state).forEach(function (node) { if (node) view.appendChild(node); });
     renderDetail(state);
     renderNotice(state);
+    document.body.classList.toggle("is-busy", !!state.busy);
     renderHost(state);
     if (caret != null) {
       var next = document.getElementById("preset-search");

@@ -1,6 +1,10 @@
 (function (root) {
   var RR = root.RRTools = root.RRTools || {};
 
+  function textEncoding() {
+    return window.cep && window.cep.encoding && window.cep.encoding.UTF8 ? window.cep.encoding.UTF8 : "UTF-8";
+  }
+
   function cepAvailable() {
     return typeof window !== "undefined" && window.__adobe_cep__ && window.cep && window.cep.fs;
   }
@@ -41,7 +45,14 @@
         });
       },
       readText: function (path) {
-        var result = window.cep.fs.readFile(path, "utf8");
+        if (typeof require === "function") {
+          try {
+            return require("fs").readFileSync(path, "utf8");
+          } catch (err) {
+            return null;
+          }
+        }
+        var result = window.cep.fs.readFile(path, textEncoding());
         if (!result || result.err !== 0) return null;
         return result.data;
       },
@@ -59,7 +70,13 @@
         return !!statData(path);
       },
       writeText: function (path, text) {
-        var result = window.cep.fs.writeFile(path, text, "utf8");
+        if (typeof require === "function") {
+          var fs = require("fs");
+          fs.mkdirSync(require("path").dirname(path), { recursive: true });
+          fs.writeFileSync(path, text, "utf8");
+          return;
+        }
+        var result = window.cep.fs.writeFile(path, text, textEncoding());
         if (!result || result.err !== 0) {
           throw new Error("cep.fs.writeFile error " + (result && result.err));
         }

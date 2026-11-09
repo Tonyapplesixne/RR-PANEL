@@ -63,6 +63,21 @@ RRTools.activeComp = function () {
     return { comp: app.project.activeItem, error: null };
 };
 
+RRTools.layerKind = function (layer) {
+    try {
+        if (layer.nullLayer) return "Null";
+        if (layer instanceof CameraLayer) return "Camera";
+        if (layer instanceof LightLayer) return "Light";
+        if (layer instanceof TextLayer) return "Text";
+        if (layer instanceof ShapeLayer) return "Shape";
+        if (layer.adjustmentLayer) return "Adjustment";
+        if (layer.source && layer.source.mainSource instanceof SolidSource) return "Solid";
+    } catch (err) {
+        return "Layer";
+    }
+    return "Layer";
+};
+
 RRTools.layerRecord = function (layer) {
     var matchName = "";
     try {
@@ -73,7 +88,8 @@ RRTools.layerRecord = function (layer) {
     return {
         index: layer.index,
         name: layer.name,
-        matchName: matchName
+        matchName: matchName,
+        kind: RRTools.layerKind(layer)
     };
 };
 

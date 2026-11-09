@@ -33,8 +33,8 @@
           <Menu>RR TOOLS</Menu>
           <Geometry>
             <Size>
-              <Height>760</Height>
-              <Width>1100</Width>
+              <Height>640</Height>
+              <Width>860</Width>
             </Size>
             <MaxSize>
               <Height>2400</Height>
