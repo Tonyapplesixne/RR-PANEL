@@ -68,7 +68,7 @@ These host calls are implemented in `extension/jsx/host.jsx`. They are not stubb
 6. Star a preset, quit After Effects, and reopen the panel. The favorite should still be on. Preferences are written to `<SystemPath.USER_DATA>/RRTools/preferences.json`. On Windows that user-data path is usually `%APPDATA%`. On macOS it is usually `~/Library/Application Support`. The Settings page prints the exact file.
 7. **Select category** selects every preset in that category. **Apply category** and **Apply selected** call the same host function with those `.ffx` paths, in one undo group named **RR TOOLS Apply Presets**. An invalid preset file returns `APPLY_FAILED` or `MISSING_FILE` with the ExtendScript message.
 
-My Presets scans a second folder chosen in the panel. It is empty until you choose one.
+My Presets scans a second folder chosen in the panel, and it also lists individual `.ffx` files added with **Add .ffx files**. A single preset file does not have to be inside the chosen folder. Both stay empty until you add a folder or a file.
 
 ## Preferences
 
@@ -80,6 +80,7 @@ My Presets scans a second folder chosen in the panel. It is empty until you choo
   "favorites": [],
   "selected": [],
   "myPresetsPath": "",
+  "myPresetFiles": [],
   "bundlePresetsPath": "",
   "section": "home"
 }

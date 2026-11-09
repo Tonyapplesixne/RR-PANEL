@@ -21,6 +21,9 @@ function nodeFs() {
     isDirectory: function (target) {
       try { return fs.statSync(target).isDirectory(); } catch (err) { return false; }
     },
+    exists: function (target) {
+      try { fs.statSync(target); return true; } catch (err) { return false; }
+    },
     readDir: function (target) {
       return fs.readdirSync(target).map(function (name) {
         const full = path.join(target, name);
@@ -85,12 +88,36 @@ try {
     favorites: ["bundle:Motion/Camera Shake.ffx", "bundle:Motion/Camera Shake.ffx", 4],
     selected: ["missing"],
     section: "nope",
-    myPresetsPath: library
+    myPresetsPath: library,
+    myPresetFiles: [path.join(temp, "loose", "snow blue text glow.ffx"), path.join(temp, "loose", "snow blue text glow.ffx")]
   });
   assert.deepStrictEqual(prefs.favorites, ["bundle:Motion/Camera Shake.ffx"]);
   assert.strictEqual(prefs.section, "home");
+  assert.strictEqual(prefs.myPresetFiles.length, 1);
   const roundTrip = preferences.normalize(JSON.parse(preferences.serialize(prefs)));
   assert.deepStrictEqual(roundTrip.favorites, prefs.favorites);
+  assert.deepStrictEqual(roundTrip.myPresetFiles, prefs.myPresetFiles);
+
+  const looseDir = path.join(temp, "loose");
+  const looseFile = path.join(looseDir, "snow blue text glow.ffx");
+  write(looseFile, "not-a-real-preset");
+  write(path.join(looseDir, "snow blue text glow.json"), JSON.stringify({
+    name: "Snow Blue Text Glow",
+    description: "Blue glow",
+    category: "Text"
+  }));
+  write(path.join(looseDir, "snow blue text glow.png"), "png");
+  const loose = catalog.scanFileList(nodeFs(), [looseFile, path.join(temp, "missing.ffx"), looseFile], "myfile");
+  assert.strictEqual(loose.presets.length, 1);
+  assert.strictEqual(loose.presets[0].name, "Snow Blue Text Glow");
+  assert.strictEqual(loose.presets[0].category, "Text");
+  assert.strictEqual(loose.presets[0].source, "myfile");
+  assert.ok(loose.presets[0].previewPath.endsWith("snow blue text glow.png"));
+  assert.ok(loose.warnings.some(function (warning) { return warning.indexOf("missing.ffx") !== -1; }));
+  const merged = catalog.mergeScans(scan, { presets: [], warnings: [], root: "" }, loose);
+  assert.strictEqual(merged.presets.length, 3);
+  const duplicateFile = catalog.mergeScans(scan, { presets: [], warnings: [], root: "" }, catalog.scanFileList(nodeFs(), [shake.filePath], "myfile"));
+  assert.strictEqual(duplicateFile.presets.length, scan.presets.length);
   assert.deepStrictEqual(preferences.missingIds(prefs.selected, scan.presets.map(function (preset) { return preset.id; })), ["missing"]);
   assert.deepStrictEqual(preferences.toggleId(prefs.favorites, shake.id), []);
 

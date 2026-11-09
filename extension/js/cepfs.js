@@ -104,10 +104,30 @@
     return { ok: true, code: "CHOSEN", message: "", path: result.data[0] };
   }
 
+  function chooseFiles(title, initialPath, extensions) {
+    if (!cepAvailable() || typeof window.cep.fs.showOpenDialogEx !== "function") {
+      return { ok: false, code: "NO_DIALOG", message: "The file dialog is not available in this host.", paths: [] };
+    }
+    var result = window.cep.fs.showOpenDialogEx(true, false, title, initialPath || "", extensions || ["ffx"]);
+    if (!result || result.err !== 0) {
+      return {
+        ok: false,
+        code: "DIALOG_FAILED",
+        message: "Could not open the file dialog (cep.fs error " + (result && result.err) + ").",
+        paths: []
+      };
+    }
+    if (!result.data || !result.data.length) {
+      return { ok: false, code: "CANCELLED", message: "File selection was cancelled.", paths: [] };
+    }
+    return { ok: true, code: "CHOSEN", message: "", paths: result.data };
+  }
+
   RR.cepfs = {
     available: cepAvailable,
     create: createCepFs,
     resolveExtensionPath: resolveExtensionPath,
-    chooseDirectory: chooseDirectory
+    chooseDirectory: chooseDirectory,
+    chooseFiles: chooseFiles
   };
 })(typeof window !== "undefined" ? window : global);

@@ -20,6 +20,7 @@
       favorites: [],
       selected: [],
       myPresetsPath: "",
+      myPresetFiles: [],
       bundlePresetsPath: "",
       section: "home"
     };
@@ -34,6 +35,7 @@
       favorites: uniqueStrings(data.favorites),
       selected: uniqueStrings(data.selected),
       myPresetsPath: typeof data.myPresetsPath === "string" ? data.myPresetsPath : "",
+      myPresetFiles: uniqueStrings(data.myPresetFiles),
       bundlePresetsPath: typeof data.bundlePresetsPath === "string" ? data.bundlePresetsPath : "",
       section: section
     };

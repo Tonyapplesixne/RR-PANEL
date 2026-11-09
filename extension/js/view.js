@@ -87,7 +87,7 @@
           text: favorite ? "★" : "☆"
         })
       ]),
-      el("div", { class: "faint", text: preset.category + (preset.source === "my" ? " · My Presets" : "") }),
+      el("div", { class: "faint", text: preset.category + (preset.source === "my" ? " · My Presets" : preset.source === "myfile" ? " · Added file" : "") }),
       preset.description ? el("p", { class: "desc", text: preset.description }) : null,
       el("div", { class: "file", text: preset.relativePath }),
       el("div", { class: "actions" }, [
@@ -105,7 +105,13 @@
           "data-id": preset.id,
           disabled: state.busy ? "disabled" : null,
           text: "Apply"
-        })
+        }),
+        preset.source === "myfile" ? el("button", {
+          type: "button",
+          "data-action": "remove-file",
+          "data-id": preset.id,
+          text: "Remove"
+        }) : null
       ])
     ]);
     return el("article", { class: "card" + (selected ? " selected" : "") }, [thumb, body]);
@@ -194,12 +200,18 @@
   }
 
   function renderPresetList(state, source, emptyTitle, emptyCopy) {
-    var presets = state.catalog.presets.filter(function (preset) { return preset.source === source; });
+    var presets = state.catalog.presets.filter(function (preset) {
+      if (source === "my") return preset.source === "my" || preset.source === "myfile";
+      return preset.source === source;
+    });
     var nodes = [listHead(state, source === "my" ? "My Presets" : "Presets", presets.length)];
     if (source === "my") {
+      var added = state.prefs.myPresetFiles && state.prefs.myPresetFiles.length;
       nodes.push(el("div", { class: "row-actions" }, [
+        el("button", { type: "button", "data-action": "add-files", text: "Add .ffx files" }),
         el("button", { type: "button", "data-action": "choose-my", text: state.paths.my ? "Change folder" : "Choose folder" }),
-        state.paths.my ? el("button", { type: "button", "data-action": "clear-my", text: "Clear folder" }) : null
+        state.paths.my ? el("button", { type: "button", "data-action": "clear-my", text: "Clear folder" }) : null,
+        added ? el("button", { type: "button", "data-action": "clear-files", text: "Clear added files" }) : null
       ]));
     }
     if (!presets.length) nodes.push(emptyState(emptyTitle, emptyCopy));
@@ -286,6 +298,8 @@
       el("div", { class: "row-actions" }, [
         el("button", { type: "button", "data-action": "choose-bundle", text: "Choose presets folder" }),
         el("button", { type: "button", "data-action": "clear-bundle", text: "Use default presets folder" }),
+        el("button", { type: "button", "data-action": "add-files", text: "Add .ffx files" }),
+        el("button", { type: "button", "data-action": "clear-files", text: "Clear added files" }),
         el("button", { type: "button", "data-action": "choose-my", text: "Choose My Presets folder" }),
         el("button", { type: "button", "data-action": "clear-my", text: "Clear My Presets folder" }),
         el("button", { type: "button", "data-action": "rescan", text: "Rescan" }),
@@ -311,9 +325,12 @@
       return renderPresetList(state, "bundle", "No library presets", "No .ffx files were found in " + (state.paths.presets || "the presets folder") + ". Add real presets and rescan.");
     }
     if (state.section === "my") {
-      var copy = state.paths.my
-        ? "No .ffx files were found in " + state.paths.my + "."
-        : "Choose a folder of your own .ffx files. Nothing is listed until that folder contains presets.";
+      var added = state.prefs.myPresetFiles && state.prefs.myPresetFiles.length;
+      var copy = added
+        ? "None of the added .ffx files could be read."
+        : state.paths.my
+          ? "No .ffx files were found in " + state.paths.my + ". You can also add individual .ffx files."
+          : "Add one or more .ffx files, or choose a folder of presets. A single preset file does not have to live in a chosen folder.";
       return renderPresetList(state, "my", "No personal presets", copy);
     }
     if (state.section === "categories") return renderCategories(state);

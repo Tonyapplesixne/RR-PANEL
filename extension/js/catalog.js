@@ -105,6 +105,90 @@
     });
   }
 
+  function stemsIn(entries) {
+    var filesByStem = {};
+    entries.forEach(function (entry) {
+      if (entry.isDirectory || isHidden(entry.name)) return;
+      var stem = entry.name.replace(/\.[^.]+$/, "").toLowerCase();
+      filesByStem[stem] = filesByStem[stem] || [];
+      filesByStem[stem].push(entry.name);
+    });
+    return filesByStem;
+  }
+
+  function metaFor(fsApi, directory, fileName, filesByStem, warnings, presetPath) {
+    var stem = fileName.replace(/\.ffx$/i, "");
+    var names = filesByStem[stem.toLowerCase()] || [];
+    var sidecarName = "";
+    names.some(function (name) {
+      if (util.extensionOf(name) === "json") {
+        sidecarName = name;
+        return true;
+      }
+      return false;
+    });
+    var meta = sidecarName ? readSidecar(fsApi, util.join(directory, sidecarName), warnings, presetPath) : {};
+    var previewName = findPreview(filesByStem, stem.toLowerCase());
+    return {
+      meta: meta,
+      previewPath: previewName ? util.join(directory, previewName) : ""
+    };
+  }
+
+  function folderCategory(directory) {
+    var name = util.basename(directory);
+    if (!name || /^[A-Za-z]:$/.test(name)) return "General";
+    return name;
+  }
+
+  function scanFileList(fsApi, filePaths, source) {
+    var presets = [];
+    var warnings = [];
+    var dirCache = {};
+    (filePaths || []).forEach(function (filePath) {
+      if (typeof filePath !== "string" || !filePath) return;
+      if (util.extensionOf(filePath) !== "ffx") {
+        warnings.push("Skipped a file that is not an .ffx preset: " + filePath);
+        return;
+      }
+      var duplicate = presets.some(function (preset) { return util.samePath(preset.filePath, filePath); });
+      if (duplicate) return;
+      if (!fsApi.exists(filePath) || fsApi.isDirectory(filePath)) {
+        warnings.push("Preset file was not found: " + filePath);
+        return;
+      }
+      var directory = util.parent(filePath);
+      var cacheKey = util.toPosix(directory).toLowerCase();
+      if (!dirCache[cacheKey]) {
+        try {
+          dirCache[cacheKey] = fsApi.readDir(directory);
+        } catch (err) {
+          warnings.push("Could not read " + directory + ": " + (err && err.message ? err.message : String(err)));
+          dirCache[cacheKey] = [];
+        }
+      }
+      var fileName = util.basename(filePath);
+      var lookedUp = metaFor(fsApi, directory, fileName, stemsIn(dirCache[cacheKey]), warnings, filePath);
+      var meta = lookedUp.meta;
+      presets.push({
+        id: source + ":" + util.toPosix(filePath),
+        name: meta.name || util.prettyName(fileName),
+        category: meta.category || folderCategory(directory),
+        description: meta.description || "",
+        filePath: filePath,
+        relativePath: filePath,
+        previewPath: lookedUp.previewPath,
+        source: source
+      });
+    });
+    presets.sort(function (a, b) {
+      var category = a.category.localeCompare(b.category);
+      if (category) return category;
+      return a.name.localeCompare(b.name);
+    });
+    return { presets: presets, warnings: warnings, root: "" };
+  }
+
   function scanRoot(fsApi, rootPath, source) {
     var presets = [];
     var warnings = [];
@@ -138,7 +222,7 @@
     return { path: sibling, reason: "missing" };
   }
 
-  function mergeScans(bundleScan, myScan) {
+  function mergeScans(bundleScan, myScan, fileScan) {
     var warnings = bundleScan.warnings.concat(myScan.warnings);
     var presets = bundleScan.presets.slice();
     if (bundleScan.root && myScan.root && util.samePath(bundleScan.root, myScan.root)) {
@@ -146,6 +230,12 @@
     } else {
       presets = presets.concat(myScan.presets);
     }
+    var added = fileScan && fileScan.presets ? fileScan.presets : [];
+    if (fileScan && fileScan.warnings) warnings = warnings.concat(fileScan.warnings);
+    added.forEach(function (preset) {
+      var duplicate = presets.some(function (existing) { return util.samePath(existing.filePath, preset.filePath); });
+      if (!duplicate) presets.push(preset);
+    });
     return {
       presets: presets,
       warnings: warnings,
@@ -172,6 +262,7 @@
 
   RR.catalog = {
     scanRoot: scanRoot,
+    scanFileList: scanFileList,
     discoverBundleRoot: discoverBundleRoot,
     mergeScans: mergeScans,
     groupByCategory: groupByCategory

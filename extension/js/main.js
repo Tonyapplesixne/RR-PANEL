@@ -82,7 +82,8 @@
     var bundle = RR.catalog.scanRoot(fsApi, discovered.path, "bundle");
     state.paths.my = state.prefs.myPresetsPath || "";
     var mine = state.paths.my ? RR.catalog.scanRoot(fsApi, state.paths.my, "my") : { presets: [], warnings: [], root: "" };
-    state.catalog = RR.catalog.mergeScans(bundle, mine);
+    var added = RR.catalog.scanFileList(fsApi, state.prefs.myPresetFiles, "myfile");
+    state.catalog = RR.catalog.mergeScans(bundle, mine, added);
     RR.view.clearPreviewCache();
   }
 
@@ -131,6 +132,25 @@
       return "";
     }
     return choice.path;
+  }
+
+  function addPresetFiles() {
+    var start = state.prefs.myPresetsPath || "";
+    var choice = RR.cepfs.chooseFiles("Add .ffx presets", start, ["ffx"]);
+    if (!choice.ok) {
+      if (choice.code !== "CANCELLED") notify("error", choice.code, choice.message);
+      return;
+    }
+    mutatePrefs(function () {
+      choice.paths.forEach(function (filePath) {
+        if (RR.util.extensionOf(filePath) !== "ffx") return;
+        var already = state.prefs.myPresetFiles.some(function (item) {
+          return RR.util.samePath(item, filePath);
+        });
+        if (!already) state.prefs.myPresetFiles.push(filePath);
+      });
+    });
+    refresh();
   }
 
   function reveal(path) {
@@ -187,6 +207,21 @@
     },
     "clear-my": function () {
       mutatePrefs(function () { state.prefs.myPresetsPath = ""; });
+      refresh();
+    },
+    "add-files": addPresetFiles,
+    "clear-files": function () {
+      mutatePrefs(function () { state.prefs.myPresetFiles = []; });
+      refresh();
+    },
+    "remove-file": function (button) {
+      var preset = findPreset(button.getAttribute("data-id"));
+      if (!preset) return;
+      mutatePrefs(function () {
+        state.prefs.myPresetFiles = state.prefs.myPresetFiles.filter(function (item) {
+          return !RR.util.samePath(item, preset.filePath);
+        });
+      });
       refresh();
     },
     "choose-bundle": function () {
