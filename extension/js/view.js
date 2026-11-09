@@ -217,7 +217,7 @@
     });
     categories.sort(function (a, b) { return a.localeCompare(b); });
     var select = el("select", { id: "category-filter", "aria-label": "Category" }, [
-      el("option", { value: "", text: "All categories" })
+      el("option", { value: "", text: "All" })
     ]);
     categories.forEach(function (category) {
       var option = el("option", { value: category, text: category });
@@ -235,28 +235,37 @@
       search,
       select,
       el("button", {
+        class: "icon-btn",
         type: "button",
         "data-action": "toggle-fav-filter",
         "aria-pressed": state.favoritesOnly ? "true" : "false",
-        text: "Favorites"
+        "aria-label": "Favorites",
+        title: "Favorites",
+        text: "★"
       }),
       el("select", { id: "sort-mode", "aria-label": "Sort" }, [
         el("option", { value: "name", text: "Name", selected: state.sort !== "date" ? "selected" : null }),
         el("option", { value: "date", text: "Date", selected: state.sort === "date" ? "selected" : null })
       ]),
       el("button", {
+        class: "icon-btn",
         type: "button",
         "data-action": "set-view",
         "data-mode": "grid",
         "aria-pressed": state.prefs.viewMode === "list" ? "false" : "true",
-        text: "Grid"
+        "aria-label": "Grid",
+        title: "Grid",
+        text: "▦"
       }),
       el("button", {
+        class: "icon-btn",
         type: "button",
         "data-action": "set-view",
         "data-mode": "list",
         "aria-pressed": state.prefs.viewMode === "list" ? "true" : "false",
-        text: "List"
+        "aria-label": "List",
+        title: "List",
+        text: "☰"
       })
     ];
     return el("div", { class: "toolbar" }, nodes);
@@ -362,7 +371,7 @@
         el("div", { class: "kicker", text: "Quick Access" }),
         el("button", { type: "button", "data-action": "nav", "data-section": "presets", text: "Open Presets" }),
         el("button", { type: "button", "data-action": "nav", "data-section": "tools", text: "Quick Tools" }),
-        el("button", { type: "button", "data-action": "toggle-sidebar", text: "Collapse sidebar" }),
+        el("button", { type: "button", "data-action": "toggle-sidebar", text: "Sidebar" }),
         el("button", { type: "button", "data-action": "nav", "data-section": "settings", text: "Settings" })
       ])
     ]);
@@ -393,12 +402,18 @@
 
   function myActions(state) {
     var added = state.prefs.myPresetFiles && state.prefs.myPresetFiles.length;
+    var menuItems = [
+      el("button", { type: "button", "data-action": "choose-my", text: state.paths.my ? "Change folder" : "Add folder" })
+    ];
+    if (state.paths.my) menuItems.push(el("button", { type: "button", "data-action": "clear-my", text: "Clear folder" }));
+    if (added) menuItems.push(el("button", { type: "button", "data-action": "clear-files", text: "Clear added files" }));
     return el("div", { class: "row-actions" }, [
-      el("button", { type: "button", "data-action": "add-files", text: "Add .ffx files" }),
-      el("button", { type: "button", "data-action": "choose-my", text: state.paths.my ? "Change folder" : "Add folder" }),
-      el("button", { type: "button", "data-action": "rescan", text: "Rescan" }),
-      state.paths.my ? el("button", { type: "button", "data-action": "clear-my", text: "Clear folder" }) : null,
-      added ? el("button", { type: "button", "data-action": "clear-files", text: "Clear added files" }) : null
+      el("button", { class: "primary", type: "button", "data-action": "add-files", text: "Add .ffx files" }),
+      el("button", { class: "icon-btn", type: "button", "data-action": "rescan", "aria-label": "Rescan", title: "Rescan", text: "↻" }),
+      el("details", { class: "more" }, [
+        el("summary", { "aria-label": "Import options", title: "Import options", text: "···" }),
+        el("div", { class: "menu" }, menuItems)
+      ])
     ]);
   }
 
@@ -620,13 +635,12 @@
     if (state.host.status === "error") {
       pill.className = "pill error";
       pill.appendChild(el("span", { class: "ae", text: "Ae" }));
-      pill.appendChild(el("span", { text: "Disconnected" }));
+      pill.appendChild(el("span", { class: "conn", text: "Disconnected" }));
       if (sideVersion) sideVersion.textContent = "Disconnected";
     } else {
       var version = (state.host.payload && state.host.payload.version) || "";
       pill.className = "pill ready";
       pill.appendChild(el("span", { class: "ae", text: "Ae" }));
-      pill.appendChild(el("span", { text: "After Effects" }));
       pill.appendChild(el("span", { class: "faint", text: version ? "v" + version : "" }));
       pill.appendChild(el("span", { class: "conn", text: "Connected" }));
       if (sideVersion) sideVersion.textContent = version || "Connected";
@@ -669,7 +683,7 @@
     var nav = document.getElementById("nav");
     clear(nav);
     NAV.forEach(function (item) {
-      var button = el("button", { type: "button", "data-action": "nav", "data-section": item[0] });
+      var button = el("button", { type: "button", "data-action": "nav", "data-section": item[0], title: item[1], "aria-label": item[1] });
       button.appendChild(icon(item[2]));
       button.appendChild(el("span", { text: item[1] }));
       if (item[0] === "my") button.appendChild(el("span", { class: "count", text: "0" }));

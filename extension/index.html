@@ -10,12 +10,13 @@
   <div id="app">
     <aside id="sidebar">
       <div class="brand">
-        <img class="logo-img" src="assets/logos/rr-mark.png" alt="RR TOOLS">
-        <div>
+        <img class="logo-full" src="assets/logos/rr-mark.png" alt="RR TOOLS">
+        <img class="logo-compact" src="assets/logos/rr-mark-compact.png" alt="RR TOOLS">
+        <div class="brand-copy">
           <strong>RR TOOLS</strong>
           <em>After Effects Toolkit</em>
         </div>
-        <button type="button" id="sidebar-toggle" class="rail-toggle" data-action="toggle-sidebar" aria-label="Collapse sidebar">⟨</button>
+        <button type="button" id="sidebar-toggle" class="rail-toggle" data-action="toggle-sidebar" aria-label="Expand sidebar"><span class="when-compact">⟩</span><span class="when-wide">⟨</span></button>
       </div>
       <nav id="nav" aria-label="Sections"></nav>
       <div class="side-foot">
@@ -28,6 +29,10 @@
     </aside>
     <div id="workspace">
       <header class="topbar">
+        <div class="top-brand">
+          <img src="assets/logos/rr-mark-compact.png" alt="">
+          <strong>RR TOOLS</strong>
+        </div>
         <div id="host-pill" class="pill">Checking</div>
       </header>
       <div id="notice" class="notice" hidden></div>

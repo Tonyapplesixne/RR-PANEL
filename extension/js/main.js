@@ -381,7 +381,10 @@
       });
     },
     "toggle-sidebar": function () {
-      document.getElementById("app").classList.toggle("rail");
+      var app = document.getElementById("app");
+      var button = document.getElementById("sidebar-toggle");
+      app.classList.toggle("wide");
+      if (button) button.setAttribute("aria-label", app.classList.contains("wide") ? "Collapse sidebar" : "Expand sidebar");
     },
     "reveal-extension": function () { reveal(state.paths.extension); },
     "reveal-presets": function () { reveal(state.paths.presets); },
