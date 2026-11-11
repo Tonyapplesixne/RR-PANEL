@@ -54,19 +54,19 @@
 
   function icon(name) {
     var paths = {
-      home: '<path d="M4 11 12 4l8 7"/><path d="M6 10.5V20h12v-9.5"/>',
-      grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/>',
-      star: '<path d="m12 3.8 2.1 4.6 5 .6-3.7 3.4.9 5-4.3-2.4L7.7 17.4l.9-5L4.9 9l5-.6z"/>',
-      clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 2"/>',
-      layers: '<path d="m12 4 8 4-8 4-8-4z"/><path d="m4 12 8 4 8-4"/><path d="m4 16 8 4 8-4"/>',
-      wrench: '<path d="M14.5 6.5a3.5 3.5 0 0 0-4.8 4.8L4 17l3 3 5.7-5.7a3.5 3.5 0 0 0 4.8-4.8L15 12l-3-3z"/>',
-      gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8 16.6 7.4M7.4 16.6 5.8 18.2"/>',
-      folder: '<path d="M3.5 7.5h6l2 2h9V19h-17z"/>',
-      refresh: '<path d="M19 12a7 7 0 1 1-2-4.9"/><path d="M19 4.5V8h-3.5"/>',
-      type: '<path d="M5 6h14M12 6v12M8 18h8"/>',
-      spark: '<path d="M12 3l1.6 5.2L19 10l-5.4 1.8L12 17l-1.6-5.2L5 10l5.4-1.8z"/>',
-      swatch: '<circle cx="12" cy="12" r="6"/>',
-      wave: '<path d="M3 14c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/>'
+      home: '<path d="M4.5 11.2 12 4.8l7.5 6.4"/><path d="M7 10.6V19h10v-8.4"/>',
+      grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
+      star: '<path d="m12 3.6 2.15 4.55 5.05.62-3.75 3.45 1 4.9L12 14.8 7.55 17.12l1-4.9L4.8 8.77l5.05-.62z"/>',
+      clock: '<circle cx="12" cy="12" r="7.5"/><path d="M12 8.2V12l2.8 1.8"/>',
+      layers: '<path d="m12 4.2 7.6 3.6L12 11.4 4.4 7.8z"/><path d="m4.6 12 7.4 3.5L19.4 12"/><path d="m4.6 15.8 7.4 3.5 7.4-3.5"/>',
+      wrench: '<path d="M14.6 6.4a3.4 3.4 0 0 0-4.7 4.6L4.2 16.7 7.3 19.8l5.7-5.7a3.4 3.4 0 0 0 4.6-4.7L15.2 12 12 8.8z"/>',
+      gear: '<circle cx="12" cy="12" r="2.7"/><path d="M12 3.6v2M12 18.4v2M3.6 12h2M18.4 12h2M5.9 5.9l1.4 1.4M16.7 16.7l1.4 1.4M18.1 5.9 16.7 7.3M7.3 16.7 5.9 18.1"/>',
+      folder: '<path d="M3.6 7.4h5.6l1.8 1.8h9.4V19H3.6z"/>',
+      refresh: '<path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19 4.6V8h-3.4"/>',
+      type: '<path d="M5 6.2h14M12 6.2V18M8.2 18h7.6"/>',
+      spark: '<path d="M12 3.2 13.5 8.4 18.8 10 13.5 11.6 12 16.8 10.5 11.6 5.2 10l5.3-1.6z"/>',
+      swatch: '<circle cx="12" cy="12" r="6.2"/><path d="M12 5.8v2.2M12 16v2.2M5.8 12H8M16 12h2.2"/>',
+      wave: '<path d="M3 14.2c2.1-3.6 3.8-3.6 5.8 0s3.7 3.6 5.8 0 3.7-3.6 5.8 0"/>'
     };
     var svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
@@ -189,6 +189,15 @@
     var attrs = { type: "button", "data-action": action, text: label };
     if (extra) Object.keys(extra).forEach(function (key) { attrs[key] = extra[key]; });
     return el("button", attrs);
+  }
+
+  function labeledButton(action, label, extra, glyph) {
+    var attrs = { type: "button", "data-action": action };
+    if (extra) Object.keys(extra).forEach(function (key) { attrs[key] = extra[key]; });
+    return el("button", attrs, [
+      glyph ? icon(glyph) : null,
+      el("span", { text: label })
+    ]);
   }
 
   function emptyState(glyph, title, copy, path, action) {
@@ -381,7 +390,7 @@
     var featuredBody = state.scanning
       ? skeletonGrid()
       : featured.length
-        ? el("div", { class: "preset-grid" }, featured.map(function (preset, index) { return presetCard(preset, state, index); }))
+        ? el("div", { class: "feature-list" }, featured.map(function (preset, index) { return featuredCard(preset, state, index); }))
         : emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", state.paths.presets || "", { action: "rescan", label: "Rescan library" });
     var nodes = [
       el("section", { class: "hero" }, [
@@ -389,18 +398,21 @@
         el("div", { class: "hero-copy" }, [
           el("p", { class: "eyebrow", text: "RR TOOLS" }),
           el("h2", {}, [
-            "Motion Library ",
+            "Motion Library",
             el("em", { text: "for After Effects" })
           ]),
           el("p", { class: "hero-line", text: "Create. Animate. Repeat." }),
           el("div", { class: "hero-actions" }, [
-            button("nav", "Browse presets", { class: "primary", "data-section": "presets" }),
-            button("nav", "Explore tools", { "data-section": "tools" })
+            labeledButton("nav", "Browse presets", { class: "primary", "data-section": "presets" }, "grid"),
+            labeledButton("nav", "Explore tools", { "data-section": "tools" }, "wrench")
           ])
         ]),
-        el("div", { class: "hero-art" }, [
-          el("span", { class: "hero-glow", "aria-hidden": "true" }),
-          el("img", { class: "hero-mark", src: "assets/branding/logos/rr-crown.png", alt: "" })
+        heroArt(),
+        el("div", { class: "hero-links" }, [
+          actionCard("nav", "presets", "grid", "Browse presets", "Open the library"),
+          actionCard("nav", "favorites", "star", "Favorites", "Starred presets on this computer"),
+          actionCard("nav", "recent", "clock", "Recent", "Presets applied from this panel"),
+          actionCard("rescan", "", "refresh", "Rescan library", "Read the presets folders again")
         ])
       ]),
       el("section", { class: "block" }, [
@@ -438,6 +450,82 @@
     return nodes;
   }
 
+  function heroArt() {
+    var view = el("div", { class: "comp-view" });
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 168 78");
+    svg.setAttribute("aria-hidden", "true");
+    svg.innerHTML = '<path d="M8 54c16-26 30-26 42-6s20 22 36 2 24-24 38-6 16 16 36 2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8 64h152" stroke="currentColor" stroke-opacity=".35"/><path d="M48 40.5 52.2 44.8 48 49.2 43.8 44.8z" fill="currentColor"/><path d="M88 46.5 92.2 50.8 88 55.2 83.8 50.8z" fill="currentColor"/><path d="M122 32.5 126.2 36.8 122 41.2 117.8 36.8z" fill="currentColor"/>';
+    view.appendChild(svg);
+    return el("div", { class: "hero-art", "aria-hidden": "true" }, [
+      el("span", { class: "hero-glow" }),
+      el("div", { class: "comp-frame" }, [
+        el("div", { class: "comp-bar" }, [
+          el("img", { src: "assets/branding/icons/ae-badge.png", alt: "" }),
+          el("span", { text: "After Effects" })
+        ]),
+        view,
+        el("div", { class: "comp-time" }, [
+          el("i"),
+          el("i"),
+          el("i"),
+          el("i")
+        ])
+      ])
+    ]);
+  }
+
+  function featuredCard(preset, state, index) {
+    var url = previewUrl(preset);
+    var preview = el("div", { class: url ? "feature-preview real" : "feature-preview" });
+    if (url) preview.appendChild(el("img", { src: url, alt: "" }));
+    else preview.appendChild(fallbackPlate(preset));
+    var highlighted = state.query && index === state.resultIndex;
+    return el("article", {
+      class: "feature-card" + (state.detailId === preset.id ? " active" : "") + (highlighted ? " highlighted" : ""),
+      "data-action": "inspect",
+      "data-id": preset.id,
+      "data-index": String(index)
+    }, [
+      preview,
+      el("div", { class: "feature-copy" }, [
+        el("span", { class: "feature-cat", text: preset.category }),
+        el("h3", { text: preset.name }),
+        preset.description ? el("p", { text: preset.description }) : null
+      ]),
+      el("div", { class: "feature-actions" }, [
+        starButton(preset, state),
+        button("inspect", "Open", {
+          class: "open-btn",
+          "data-id": preset.id,
+          "aria-label": "Open " + preset.name
+        })
+      ])
+    ]);
+  }
+
+  function actionCard(action, section, glyph, title, copy) {
+    return el("button", {
+      type: "button",
+      class: "action-card",
+      "data-action": action,
+      "data-section": section || null
+    }, [
+      icon(glyph),
+      el("strong", { text: title }),
+      el("span", { text: copy })
+    ]);
+  }
+
+  function categoryCopy(group) {
+    var notes = [];
+    group.presets.forEach(function (preset) {
+      if (preset.description && notes.indexOf(preset.description) === -1) notes.push(preset.description);
+    });
+    if (notes.length) return notes.slice(0, 2).join(" · ");
+    return group.presets.map(function (preset) { return preset.name; }).slice(0, 3).join(" · ");
+  }
+
   function recentRow(preset, state, index) {
     var url = previewUrl(preset);
     var thumb = el("div", { class: "list-thumb" });
@@ -463,6 +551,7 @@
     var tone = toneOf(group.category);
     var swatch = el("span", { class: "cat-swatch", "aria-hidden": "true" });
     swatch.appendChild(icon(toneIcon(tone)));
+    var count = group.presets.length;
     return el("button", {
       type: "button",
       class: "cat-tile tone-" + tone,
@@ -472,7 +561,8 @@
     }, [
       swatch,
       el("strong", { text: group.category }),
-      el("span", { class: "cat-count", text: group.presets.length + (group.presets.length === 1 ? " preset" : " presets") })
+      el("span", { class: "cat-blurb", text: categoryCopy(group) }),
+      el("span", { class: "cat-count", text: count + (count === 1 ? " preset" : " presets") })
     ]);
   }
 
@@ -698,7 +788,7 @@
     } else {
       var version = (state.host.payload && state.host.payload.version) || "";
       pill.className = "pill ready";
-      pill.appendChild(el("span", { class: "ae-mark", text: "Ae" }));
+      pill.appendChild(el("img", { class: "ae-badge", src: "assets/branding/icons/ae-badge.png", alt: "After Effects" }));
       pill.appendChild(dot);
       pill.appendChild(el("span", { text: "Connected" }));
       if (version) pill.appendChild(el("span", { class: "host-version", text: version }));
