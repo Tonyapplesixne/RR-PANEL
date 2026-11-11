@@ -381,7 +381,7 @@
     var featuredBody = state.scanning
       ? skeletonGrid()
       : featured.length
-        ? el("div", { class: "preset-grid" }, featured.map(function (preset, index) { return presetCard(preset, state, index); }))
+        ? el("div", { class: "feature-list" }, featured.map(function (preset, index) { return featuredRow(preset, state, index); }))
         : emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", state.paths.presets || "", { action: "rescan", label: "Rescan library" });
     var nodes = [
       el("section", { class: "hero" }, [
@@ -389,13 +389,19 @@
         el("div", { class: "hero-copy" }, [
           el("p", { class: "eyebrow", text: "RR TOOLS" }),
           el("h2", {}, [
-            "Motion Library ",
+            "Motion Library",
             el("em", { text: "for After Effects" })
           ]),
           el("p", { class: "hero-line", text: "Create. Animate. Repeat." }),
           el("div", { class: "hero-actions" }, [
             button("nav", "Browse presets", { class: "primary", "data-section": "presets" }),
             button("nav", "Explore tools", { "data-section": "tools" })
+          ]),
+          el("div", { class: "quick-row" }, [
+            quickLink("nav", "favorites", "star", "Favorites"),
+            quickLink("nav", "recent", "clock", "Recent"),
+            quickLink("rescan", "", "refresh", "Rescan"),
+            quickLink("add-files", "", "folder", "Add .ffx")
           ])
         ]),
         el("div", { class: "hero-art" }, [
@@ -438,6 +444,46 @@
     return nodes;
   }
 
+  function quickLink(action, section, glyph, label) {
+    var node = el("button", {
+      type: "button",
+      class: "quick-link",
+      "data-action": action,
+      "data-section": section || null
+    });
+    node.appendChild(icon(glyph));
+    node.appendChild(el("span", { text: label }));
+    return node;
+  }
+
+  function featuredRow(preset, state, index) {
+    var url = previewUrl(preset);
+    var media = el("div", {
+      class: url ? "feature-media" : "feature-media bare",
+      title: url ? "" : "No preview image"
+    });
+    if (url) media.appendChild(el("img", { src: url, alt: "" }));
+    else media.appendChild(el("span", { text: "No image" }));
+    var desc = String(preset.description || "").trim();
+    return el("article", {
+      class: "feature-row" + (state.detailId === preset.id ? " active" : ""),
+      "data-action": "inspect",
+      "data-id": preset.id,
+      "data-index": String(index)
+    }, [
+      media,
+      el("div", { class: "feature-copy" }, [
+        el("h2", { text: preset.name }),
+        el("p", { class: "feature-cat", text: preset.category || "" }),
+        desc ? el("p", { class: "feature-desc", text: desc }) : null
+      ]),
+      el("div", { class: "feature-actions" }, [
+        starButton(preset, state),
+        button("apply-one", "Apply", { class: "primary", "data-id": preset.id, disabled: state.busy ? "disabled" : null })
+      ])
+    ]);
+  }
+
   function recentRow(preset, state, index) {
     var url = previewUrl(preset);
     var thumb = el("div", { class: "list-thumb" });
@@ -472,6 +518,7 @@
     }, [
       swatch,
       el("strong", { text: group.category }),
+      el("span", { class: "cat-blurb", text: group.category + " presets from your library." }),
       el("span", { class: "cat-count", text: group.presets.length + (group.presets.length === 1 ? " preset" : " presets") })
     ]);
   }
