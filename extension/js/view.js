@@ -62,6 +62,7 @@
       wrench: '<path d="M14.5 6.5a3.5 3.5 0 0 0-4.8 4.8L4 17l3 3 5.7-5.7a3.5 3.5 0 0 0 4.8-4.8L15 12l-3-3z"/>',
       gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8 16.6 7.4M7.4 16.6 5.8 18.2"/>',
       folder: '<path d="M3.5 7.5h6l2 2h9V19h-17z"/>',
+      play: '<path d="M8 6.5v11l9-5.5z"/>',
       refresh: '<path d="M19 12a7 7 0 1 1-2-4.9"/><path d="M19 4.5V8h-3.5"/>',
       type: '<path d="M5 6h14M12 6v12M8 18h8"/>',
       spark: '<path d="M12 3l1.6 5.2L19 10l-5.4 1.8L12 17l-1.6-5.2L5 10l5.4-1.8z"/>',
@@ -394,8 +395,8 @@
           ]),
           el("p", { class: "hero-line", text: "Create. Animate. Repeat." }),
           el("div", { class: "hero-actions" }, [
-            button("nav", "Browse presets", { class: "primary", "data-section": "presets" }),
-            button("nav", "Explore tools", { "data-section": "tools" })
+            labeled("nav", "presets", "play", "Browse presets", "primary"),
+            labeled("nav", "tools", "layers", "Explore tools", "")
           ]),
           el("div", { class: "quick-row" }, [
             quickLink("nav", "favorites", "star", "Favorites"),
@@ -406,6 +407,7 @@
         ]),
         el("div", { class: "hero-art" }, [
           el("span", { class: "hero-glow", "aria-hidden": "true" }),
+          timelineStage(),
           el("img", { class: "hero-mark", src: "assets/branding/logos/rr-crown.png", alt: "" })
         ])
       ]),
@@ -444,6 +446,43 @@
     return nodes;
   }
 
+  function labeled(action, section, glyph, label, cls) {
+    var node = el("button", {
+      type: "button",
+      class: cls || null,
+      "data-action": action,
+      "data-section": section || null
+    });
+    if (glyph) node.appendChild(icon(glyph));
+    node.appendChild(el("span", { text: label }));
+    return node;
+  }
+
+  function timelineStage() {
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "hero-timeline");
+    svg.setAttribute("viewBox", "0 0 220 150");
+    svg.setAttribute("aria-hidden", "true");
+    svg.innerHTML = [
+      '<g fill="none" stroke="rgba(186,164,255,0.38)" stroke-width="1">',
+      '<rect x="18" y="16" width="168" height="112" rx="12"/>',
+      '<rect x="36" y="28" width="168" height="112" rx="12"/>',
+      "</g>",
+      '<g stroke="rgba(176,150,255,0.85)" stroke-width="3" stroke-linecap="round">',
+      '<path d="M52 52h62"/><path d="M52 74h92"/><path d="M52 96h48"/><path d="M52 118h74"/>',
+      "</g>",
+      '<g fill="#efe8ff">',
+      '<path d="M92 48l4 4-4 4-4-4z"/>',
+      '<path d="M128 70l4 4-4 4-4-4z"/>',
+      '<path d="M86 92l4 4-4 4-4-4z"/>',
+      '<path d="M140 114l4 4-4 4-4-4z"/>',
+      "</g>",
+      '<path d="M48 128C78 128 96 46 168 58" fill="none" stroke="#d4c6ff" stroke-width="1.4"/>',
+      '<circle cx="168" cy="58" r="2.4" fill="#efe8ff"/>'
+    ].join("");
+    return svg;
+  }
+
   function quickLink(action, section, glyph, label) {
     var node = el("button", {
       type: "button",
@@ -459,11 +498,14 @@
   function featuredRow(preset, state, index) {
     var url = previewUrl(preset);
     var media = el("div", {
-      class: url ? "feature-media" : "feature-media bare",
+      class: url ? "feature-media" : "feature-media bare tone-" + toneOf(preset.category),
       title: url ? "" : "No preview image"
     });
     if (url) media.appendChild(el("img", { src: url, alt: "" }));
-    else media.appendChild(el("span", { text: "No image" }));
+    else {
+      media.appendChild(el("span", { class: "bare-mark", "aria-hidden": "true" }));
+      media.appendChild(el("span", { class: "bare-label", text: "No preview" }));
+    }
     var desc = String(preset.description || "").trim();
     return el("article", {
       class: "feature-row" + (state.detailId === preset.id ? " active" : ""),
@@ -516,6 +558,7 @@
       "data-category": group.category,
       title: group.category
     }, [
+      el("span", { class: "cat-glow", "aria-hidden": "true" }),
       swatch,
       el("strong", { text: group.category }),
       el("span", { class: "cat-blurb", text: group.category + " presets from your library." }),
