@@ -265,7 +265,6 @@
       "data-id": preset.id,
       disabled: state.busy ? "disabled" : null
     });
-    preview.appendChild(apply);
     var meta = preset.category + (preset.usedAt ? " · " + ago(preset.usedAt) : "");
     var tags = (preset.tags || []).slice(0, 3).map(function (tag) {
       return el("span", { text: tag });
@@ -280,7 +279,8 @@
       el("div", { class: "card-body" }, [
         el("h2", { text: preset.name }),
         el("p", { text: meta }),
-        tags.length ? el("div", { class: "tags" }, tags) : null
+        tags.length ? el("div", { class: "tags" }, tags) : null,
+        el("div", { class: "card-actions" }, [apply])
       ])
     ]);
   }
@@ -309,10 +309,9 @@
       thumb,
       el("div", { class: "list-copy" }, [
         el("h2", { text: preset.name }),
+        el("p", { text: preset.category + (preset.usedAt ? " · " + ago(preset.usedAt) : "") }),
         preset.description ? el("p", { text: preset.description }) : null
       ]),
-      el("span", { class: "list-cat", text: preset.category }),
-      preset.usedAt ? el("span", { class: "list-when", text: ago(preset.usedAt) }) : null,
       starButton(preset, state),
       button("apply-one", "Apply", { class: "apply", "data-id": preset.id, disabled: state.busy ? "disabled" : null })
     ]);
@@ -385,30 +384,18 @@
         ? el("div", { class: "feature-list" }, featured.map(function (preset, index) { return featuredRow(preset, state, index); }))
         : emptyState("✦", "Your library is empty", "Add .ffx presets to your presets folder and rescan the library.", state.paths.presets || "", { action: "rescan", label: "Rescan library" });
     var nodes = [
-      el("section", { class: "hero" }, [
-        el("div", { class: "hero-sky", "aria-hidden": "true" }),
-        el("div", { class: "hero-copy" }, [
-          el("p", { class: "eyebrow", text: "RR TOOLS" }),
-          el("h2", {}, [
-            "Motion Library",
-            el("em", { text: "for After Effects" })
-          ]),
-          el("p", { class: "hero-line", text: "Create. Animate. Repeat." }),
-          el("div", { class: "hero-actions" }, [
-            labeled("nav", "presets", "play", "Browse presets", "primary"),
-            labeled("nav", "tools", "layers", "Explore tools", "")
-          ]),
-          el("div", { class: "quick-row" }, [
-            quickLink("nav", "favorites", "star", "Favorites"),
-            quickLink("nav", "recent", "clock", "Recent"),
-            quickLink("rescan", "", "refresh", "Rescan"),
-            quickLink("add-files", "", "folder", "Add .ffx")
-          ])
+      el("section", { class: "home-head" }, [
+        el("p", { class: "eyebrow", text: "RR TOOLS" }),
+        el("h2", { text: "Motion Library" }),
+        el("p", { class: "hero-line", text: "Create. Animate. Repeat." }),
+        el("div", { class: "hero-actions" }, [
+          labeled("nav", "presets", "play", "Browse presets", "primary")
         ]),
-        el("div", { class: "hero-art" }, [
-          el("span", { class: "hero-glow", "aria-hidden": "true" }),
-          timelineStage(),
-          el("img", { class: "hero-mark", src: "assets/branding/logos/rr-crown.png", alt: "" })
+        el("div", { class: "quick-row" }, [
+          quickLink("nav", "favorites", "star", "Favorites"),
+          quickLink("nav", "recent", "clock", "Recent"),
+          quickLink("rescan", "", "refresh", "Rescan"),
+          quickLink("add-files", "", "folder", "Add .ffx")
         ])
       ]),
       el("section", { class: "block" }, [
@@ -456,31 +443,6 @@
     if (glyph) node.appendChild(icon(glyph));
     node.appendChild(el("span", { text: label }));
     return node;
-  }
-
-  function timelineStage() {
-    var svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("class", "hero-timeline");
-    svg.setAttribute("viewBox", "0 0 220 150");
-    svg.setAttribute("aria-hidden", "true");
-    svg.innerHTML = [
-      '<g fill="none" stroke="rgba(186,164,255,0.38)" stroke-width="1">',
-      '<rect x="18" y="16" width="168" height="112" rx="12"/>',
-      '<rect x="36" y="28" width="168" height="112" rx="12"/>',
-      "</g>",
-      '<g stroke="rgba(176,150,255,0.85)" stroke-width="3" stroke-linecap="round">',
-      '<path d="M52 52h62"/><path d="M52 74h92"/><path d="M52 96h48"/><path d="M52 118h74"/>',
-      "</g>",
-      '<g fill="#efe8ff">',
-      '<path d="M92 48l4 4-4 4-4-4z"/>',
-      '<path d="M128 70l4 4-4 4-4-4z"/>',
-      '<path d="M86 92l4 4-4 4-4-4z"/>',
-      '<path d="M140 114l4 4-4 4-4-4z"/>',
-      "</g>",
-      '<path d="M48 128C78 128 96 46 168 58" fill="none" stroke="#d4c6ff" stroke-width="1.4"/>',
-      '<circle cx="168" cy="58" r="2.4" fill="#efe8ff"/>'
-    ].join("");
-    return svg;
   }
 
   function quickLink(action, section, glyph, label) {
@@ -589,16 +551,65 @@
     }))];
   }
 
+  function compositionFields(state) {
+    var host = state.host || { status: "pending", payload: null, error: "" };
+    var payload = host.payload || {};
+    var comp = payload.composition || null;
+    var selected = payload.selectedLayers && payload.selectedLayers[0];
+    var contextError = payload.contextError || null;
+    var selectionError = payload.selectionError || null;
+    var name;
+    if (comp) name = comp.name;
+    else if (host.status === "error") name = host.error || "After Effects did not answer.";
+    else if (contextError && contextError.message) name = contextError.message;
+    else name = "Waiting for the active composition.";
+    var meta = comp ? comp.width + " × " + comp.height + " · " + comp.frameRate + " fps · " + comp.numLayers + " layers" : "";
+    var layer = "";
+    var code = "";
+    if (comp) {
+      layer = selected ? "Selected: " + selected.name : "No layer selected.";
+      if (!selected && selectionError && selectionError.code) code = selectionError.code;
+    } else if (contextError && contextError.code) code = contextError.code;
+    return { name: name, meta: meta, layer: layer, code: code };
+  }
+
+  function updateToolsHost(state) {
+    var name = document.getElementById("tool-comp-name");
+    if (!name) return;
+    var fields = compositionFields(state);
+    name.textContent = fields.name;
+    var meta = document.getElementById("tool-comp-meta");
+    if (meta) {
+      meta.textContent = fields.meta;
+      meta.hidden = !fields.meta;
+    }
+    var layer = document.getElementById("tool-comp-layer");
+    if (layer) {
+      layer.textContent = fields.layer;
+      layer.hidden = !fields.layer;
+    }
+    var code = document.getElementById("tool-comp-code");
+    if (code) {
+      code.textContent = fields.code;
+      code.hidden = !fields.code;
+    }
+  }
+
   function renderTools(state) {
-    var host = state.host || { status: "pending" };
-    var comp = host.payload && host.payload.composition;
-    var selected = host.payload && host.payload.selectedLayers && host.payload.selectedLayers[0];
+    var fields = compositionFields(state);
+    var meta = el("p", { class: "muted", id: "tool-comp-meta", text: fields.meta });
+    var layer = el("p", { class: "muted", id: "tool-comp-layer", text: fields.layer });
+    var code = el("p", { class: "muted", id: "tool-comp-code", text: fields.code });
+    meta.hidden = !fields.meta;
+    layer.hidden = !fields.layer;
+    code.hidden = !fields.code;
     return [
-      el("section", { class: "panel-card" }, [
+      el("section", { class: "panel-card", id: "tool-comp" }, [
         el("h2", { text: "Composition" }),
-        el("p", { text: comp ? comp.name : host.status === "error" ? (host.error || "After Effects did not answer.") : "Waiting for the active composition." }),
-        comp ? el("p", { class: "muted", text: comp.width + " × " + comp.height + " · " + comp.frameRate + " fps · " + comp.numLayers + " layers" }) : null,
-        el("p", { class: "muted", text: selected ? "Selected: " + selected.name : "No layer selected." })
+        el("p", { id: "tool-comp-name", text: fields.name }),
+        meta,
+        layer,
+        code
       ]),
       el("section", { class: "block" }, [
         el("div", { class: "block-head" }, [el("h2", { text: "Layer tools" })]),
@@ -614,14 +625,6 @@
           button("add-files", "Add .ffx files", { class: "primary" }),
           button("choose-my", "Add folder"),
           button("rescan", "Rescan")
-        ])
-      ]),
-      el("section", { class: "block" }, [
-        el("div", { class: "block-head" }, [el("h2", { text: "Not available yet" })]),
-        el("div", { class: "tool-row" }, [
-          el("button", { type: "button", disabled: "disabled", title: "Not available" }, [el("span", { text: "Bind preset" }), el("small", { text: "Not available" })]),
-          el("button", { type: "button", disabled: "disabled", title: "Not available" }, [el("span", { text: "Quick trim" }), el("small", { text: "Not available" })]),
-          el("button", { type: "button", disabled: "disabled", title: "Not available" }, [el("span", { text: "Beat marker" }), el("small", { text: "Not available" })])
         ])
       ])
     ];
@@ -656,6 +659,9 @@
           button("add-files", "Add .ffx files"),
           button("nav", "Review", { "data-section": "my" }),
           (state.prefs.myPresetFiles || []).length ? button("clear-files", "Clear") : null
+        ]),
+        pathRow("Preferences file", state.prefsPath, [
+          state.prefsPath ? button("reveal-prefs", "Show") : null
         ])
       ]),
       el("section", { class: "block" }, [
@@ -701,11 +707,14 @@
     (state.catalog.presets || []).forEach(function (item) {
       if (item.id === state.detailId) preset = item;
     });
+    var appNode = document.getElementById("app");
     if (!preset) {
       detail.className = "";
+      if (appNode) appNode.classList.remove("detail-open");
       return;
     }
     detail.className = "open";
+    if (appNode) appNode.classList.add("detail-open");
     var favorite = RR.preferences.contains(state.prefs.favorites, preset.id);
     var url = previewUrl(preset);
     var preview = el("div", { class: "preview detail-preview" });
@@ -740,15 +749,10 @@
 
   function renderNotice(state) {
     var notice = document.getElementById("notice");
-    var bell = document.getElementById("notice-bell");
     if (!notice) return;
     var banner = state.notice;
     if (state.prefsError && (!banner || banner.kind !== "error")) {
       banner = { kind: "error", code: "BAD_PREFS", message: state.prefsError, detail: "" };
-    }
-    if (bell) {
-      bell.classList.toggle("has-note", !!banner);
-      bell.title = banner ? "Show the latest message" : "No notifications";
     }
     if (!banner) {
       notice.hidden = true;
@@ -763,37 +767,46 @@
     if (banner.detail) notice.appendChild(el("p", { class: "detail", text: banner.detail }));
   }
 
+  function hostTitle(state) {
+    if (state.outsideHost) return "Browser";
+    if (!state.host || state.host.status === "pending") return "Checking";
+    if (state.host.status === "error") return state.host.error || "Disconnected";
+    var version = (state.host.payload && state.host.payload.version) || "";
+    return version ? "Connected " + version : "Connected";
+  }
+
   function renderHost(state) {
     var pill = document.getElementById("host-pill");
-    if (!pill) return;
-    clear(pill);
-    pill.className = "pill";
-    var dot = el("i", { class: "dot", "aria-hidden": "true" });
-    if (state.outsideHost) {
-      pill.appendChild(dot);
-      pill.appendChild(el("span", { text: "Browser" }));
-      return;
+    if (pill) {
+      clear(pill);
+      pill.className = "pill";
+      pill.title = hostTitle(state);
+      var dot = el("i", { class: "dot", "aria-hidden": "true" });
+      if (state.outsideHost) {
+        pill.appendChild(dot);
+        pill.appendChild(el("span", { class: "status-label", text: "Browser" }));
+      } else if (!state.host || state.host.status === "pending") {
+        pill.appendChild(dot);
+        pill.appendChild(el("span", { class: "status-label", text: "Checking" }));
+      } else if (state.host.status === "error") {
+        pill.className = "pill error";
+        pill.title = hostTitle(state);
+        pill.appendChild(dot);
+        pill.appendChild(el("span", { class: "status-label", text: "Disconnected" }));
+        var aeError = document.getElementById("ae-version");
+        if (aeError && !aeError.textContent) aeError.textContent = "After Effects did not answer.";
+      } else {
+        var version = (state.host.payload && state.host.payload.version) || "";
+        pill.className = "pill ready";
+        pill.appendChild(el("span", { class: "ae-mark", text: "Ae" }));
+        pill.appendChild(dot);
+        pill.appendChild(el("span", { class: "status-label", text: "Connected" }));
+        if (version) pill.appendChild(el("span", { class: "host-version", text: version }));
+        var ae = document.getElementById("ae-version");
+        if (ae) ae.textContent = version ? "Connected host " + version : "Connected.";
+      }
     }
-    if (!state.host || state.host.status === "pending") {
-      pill.appendChild(dot);
-      pill.appendChild(el("span", { text: "Checking" }));
-      return;
-    }
-    var ae = document.getElementById("ae-version");
-    if (state.host.status === "error") {
-      pill.className = "pill error";
-      pill.appendChild(dot);
-      pill.appendChild(el("span", { text: "Disconnected" }));
-      if (ae && !ae.textContent) ae.textContent = "After Effects did not answer.";
-    } else {
-      var version = (state.host.payload && state.host.payload.version) || "";
-      pill.className = "pill ready";
-      pill.appendChild(el("span", { class: "ae-mark", text: "Ae" }));
-      pill.appendChild(dot);
-      pill.appendChild(el("span", { text: "Connected" }));
-      if (version) pill.appendChild(el("span", { class: "host-version", text: version }));
-      if (ae) ae.textContent = version ? "Connected host " + version : "Connected.";
-    }
+    updateToolsHost(state);
   }
 
   function renderPalette(state) {
