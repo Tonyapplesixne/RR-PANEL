@@ -5,7 +5,10 @@
     probe: "probe",
     applyPresets: "applyPresets",
     revealFolder: "revealFolder",
-    addLayer: "addLayer"
+    addLayer: "addLayer",
+    inspectKey: "inspectKey",
+    removeBackground: "removeBackground",
+    checkerboard: "checkerboard"
   };
 
   function createBridge(csInterface) {
@@ -85,7 +88,10 @@
       probe: function () { return call("probe"); },
       applyPresets: function (paths) { return call("applyPresets", { paths: paths }); },
       revealFolder: function (path) { return call("revealFolder", { path: path }); },
-      addLayer: function (kind) { return call("addLayer", { kind: kind }); }
+      addLayer: function (kind) { return call("addLayer", { kind: kind }); },
+      inspectKey: function () { return call("inspectKey"); },
+      removeBackground: function (settings) { return call("removeBackground", settings); },
+      checkerboard: function (enabled) { return call("checkerboard", { enabled: !!enabled }); }
     };
   }
 
