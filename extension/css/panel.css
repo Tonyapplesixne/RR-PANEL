@@ -499,6 +499,27 @@ button.text-btn:hover:not(:disabled) { background: transparent; border-color: tr
 @keyframes shine { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 
 .tool-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.key-field { display: block; margin-top: 8px; }
+.key-field span { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+.key-field b { color: var(--text); font-weight: 600; }
+.key-field input[type="range"] { width: 100%; margin-top: 4px; }
+.key-field input[type="color"] {
+  width: 42px;
+  height: 28px;
+  margin-top: 4px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+#key-tool .switch-row { margin-top: 8px; }
+.key-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
 .path-row, .panel-card, .switch-row, .about, .detail-card {
   background: var(--graphite);
   border: 1px solid var(--line);

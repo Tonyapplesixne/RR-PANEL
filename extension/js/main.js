@@ -21,7 +21,19 @@
     paletteIndex: 0,
     resultIndex: 0,
     popId: "",
-    scanning: false
+    scanning: false,
+    key: {
+      color: "#000000",
+      tolerance: 10,
+      softness: 8,
+      feather: 0,
+      halo: true,
+      checker: false,
+      report: "",
+      previewPath: "",
+      previewStamp: 0,
+      previewNote: ""
+    }
   };
   var cs = null;
   var bridge = null;
@@ -378,6 +390,50 @@
         probe();
       });
     },
+    "check-key": function () {
+      if (state.busy || !bridge) return;
+      readKeyForm();
+      state.busy = true;
+      RR.view.render(state);
+      bridge.inspectKey().then(function (result) {
+        state.busy = false;
+        applyKeyReport(result);
+        notify(result.ok ? "ok" : "error", result.code || "SAMPLE_FAILED", result.message || "After Effects did not read the layer.");
+        probe();
+      });
+    },
+    "remove-background": function () {
+      if (state.busy || !bridge) return;
+      readKeyForm();
+      state.busy = true;
+      RR.view.render(state);
+      bridge.removeBackground({
+        color: hexToRgb(state.key.color),
+        tolerance: state.key.tolerance,
+        softness: state.key.softness,
+        feather: state.key.feather,
+        halo: state.key.halo
+      }).then(function (result) {
+        state.busy = false;
+        applyKeyReport(result);
+        var detail = boundDetail(result);
+        if (result && result.detail) detail = result.detail + (detail ? " " + detail : "");
+        notify(result.ok ? "ok" : "error", result.code || "KEY_FAILED", result.message || "The background was not removed.", detail);
+        probe();
+      });
+    },
+    "toggle-checker": function () {
+      if (state.busy || !bridge) return;
+      readKeyForm();
+      state.busy = true;
+      RR.view.render(state);
+      bridge.checkerboard(!state.key.checker).then(function (result) {
+        state.busy = false;
+        if (result && typeof result.checkerboard === "boolean") state.key.checker = result.checkerboard;
+        notify(result.ok ? "ok" : "error", result.code || "CHECKER_FAILED", result.message || "The checkerboard guide was not changed.");
+        probe();
+      });
+    },
     "toggle-select": function (button) {
       var id = button.getAttribute("data-id");
       mutatePrefs(function () { state.prefs.selected = RR.preferences.toggleId(state.prefs.selected, id); });
@@ -478,6 +534,12 @@
   };
 
   document.body.addEventListener("input", function (event) {
+    if (event.target && event.target.id && event.target.id.indexOf("key-") === 0) {
+      readKeyForm();
+      var output = document.getElementById(event.target.id + "-out");
+      if (output && event.target.type === "range") output.textContent = event.target.value;
+      return;
+    }
     if (event.target.id === "palette-search") {
       state.paletteQuery = event.target.value;
       state.paletteIndex = 0;
@@ -494,6 +556,10 @@
   });
 
   document.body.addEventListener("change", function (event) {
+    if (event.target && event.target.id && event.target.id.indexOf("key-") === 0) {
+      readKeyForm();
+      return;
+    }
     if (event.target.id === "motion-toggle") {
       state.prefs.motion = !!event.target.checked;
       if (savePrefs(false)) RR.view.render(state);
@@ -594,6 +660,59 @@
       RR.view.render(state);
     }
   });
+
+  function hexToRgb(hex) {
+    var value = String(hex || "").replace("#", "");
+    if (value.length === 3) {
+      value = value.charAt(0) + value.charAt(0) + value.charAt(1) + value.charAt(1) + value.charAt(2) + value.charAt(2);
+    }
+    if (value.length !== 6) return [0, 0, 0];
+    return [
+      parseInt(value.substring(0, 2), 16) / 255,
+      parseInt(value.substring(2, 4), 16) / 255,
+      parseInt(value.substring(4, 6), 16) / 255
+    ];
+  }
+
+  function readKeyForm() {
+    if (!state.key) state.key = {};
+    var color = document.getElementById("key-color");
+    var tolerance = document.getElementById("key-tolerance");
+    var softness = document.getElementById("key-softness");
+    var feather = document.getElementById("key-feather");
+    var halo = document.getElementById("key-halo");
+    if (color && color.value) state.key.color = color.value;
+    if (tolerance) state.key.tolerance = Number(tolerance.value);
+    if (softness) state.key.softness = Number(softness.value);
+    if (feather) state.key.feather = Number(feather.value);
+    if (halo) state.key.halo = !!halo.checked;
+  }
+
+  function boundDetail(result) {
+    if (!result || !result.bound || !result.bound.length) return "";
+    return result.bound.map(function (item) {
+      return item.property + " (" + item.matchName + ")";
+    }).join(", ");
+  }
+
+  function applyKeyReport(result) {
+    if (!state.key) state.key = {};
+    if (!result) return;
+    if (result.black && result.suggested && result.suggested.length === 3) {
+      state.key.color = "#000000";
+      state.key.halo = true;
+    }
+    if (result.code === "INSPECTED" && result.black === false) state.key.halo = false;
+    if (typeof result.checkerboard === "boolean") state.key.checker = result.checkerboard;
+    if (result.code === "KEYED" || result.code === "HAS_ALPHA" || result.code === "INSPECTED") {
+      state.key.report = result.message || "";
+    }
+    if (result.code === "KEYED") {
+      state.key.previewPath = result.preview || "";
+      state.key.previewStamp = result.previewStamp || 0;
+      state.key.previewNote = result.previewNote || "";
+    }
+  }
 
   function boot() {
     if (!window.__adobe_cep__) {

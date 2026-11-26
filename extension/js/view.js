@@ -27,7 +27,7 @@
     ["nav:favorites", "Favorites", "Starred presets on this computer"],
     ["nav:recent", "Recent", "Presets applied from this panel"],
     ["nav:categories", "Categories", "Browse by category"],
-    ["nav:tools", "Tools", "Layers and library actions"],
+    ["nav:tools", "Tools", "Background key, layers, and library"],
     ["nav:settings", "Settings", "Paths and preferences"],
     ["rescan", "Rescan library", "Read the presets folders again"],
     ["add-files", "Add .ffx files", "Import individual preset files"],
@@ -35,6 +35,7 @@
   ];
   var previewCache = {};
   var mtimeCache = {};
+  var keyFrameCache = { id: "", url: "" };
 
   function el(tag, attrs, children) {
     var node = document.createElement(tag);
@@ -595,6 +596,103 @@
     }
   }
 
+  function keySettings(state) {
+    var key = state.key || {};
+    return {
+      color: key.color || "#000000",
+      tolerance: key.tolerance == null ? 10 : key.tolerance,
+      softness: key.softness == null ? 8 : key.softness,
+      feather: key.feather == null ? 0 : key.feather,
+      halo: !!key.halo,
+      checker: !!key.checker,
+      report: key.report || "",
+      previewPath: key.previewPath || "",
+      previewStamp: key.previewStamp || 0,
+      previewNote: key.previewNote || ""
+    };
+  }
+
+  function keySlider(id, label, value) {
+    return el("label", { class: "key-field" }, [
+      el("span", {}, [
+        el("span", { text: label }),
+        el("b", { id: id + "-out", text: String(value) })
+      ]),
+      el("input", {
+        id: id,
+        type: "range",
+        min: "0",
+        max: "100",
+        step: "1",
+        value: String(value),
+        "aria-label": label
+      })
+    ]);
+  }
+
+  function keyFrameUrl(path, stamp) {
+    if (!path || !RR.cepfs || !RR.cepfs.available || !RR.cepfs.available()) return "";
+    var id = path + "|" + String(stamp || 0);
+    if (keyFrameCache.id === id) return keyFrameCache.url;
+    var fsApi = RR.cepfs.create();
+    var size = fsApi.statSize(path);
+    if (!size || size > 8000000) {
+      keyFrameCache = { id: id, url: "" };
+      return "";
+    }
+    var encoded = fsApi.readBase64(path);
+    if (!encoded) {
+      keyFrameCache = { id: id, url: "" };
+      return "";
+    }
+    var url = "data:image/png;base64," + encoded;
+    keyFrameCache = { id: id, url: url };
+    return url;
+  }
+
+  function renderKeyTool(state) {
+    var key = keySettings(state);
+    var frame = keyFrameUrl(key.previewPath, key.previewStamp);
+    var preview = null;
+    if (frame) {
+      preview = el("img", {
+        class: "key-preview",
+        src: frame,
+        alt: "Rendered frame of the keyed layer over a checkerboard."
+      });
+    } else if (key.previewNote) {
+      preview = el("p", { class: "muted", text: key.previewNote });
+    } else if (key.previewPath) {
+      preview = el("p", { class: "muted", text: "The rendered frame could not be shown in the panel." });
+    }
+    return el("section", { class: "block", id: "key-tool" }, [
+      el("div", { class: "block-head" }, [el("h2", { text: "Remove solid background" })]),
+      el("p", { class: "muted", text: "Keys a solid background out of the selected layer. White text and colored graphics stay opaque. Footage that already has transparency is left alone." }),
+      el("label", { class: "key-field" }, [
+        el("span", {}, [el("span", { text: "Key color" })]),
+        el("input", { id: "key-color", type: "color", value: key.color, "aria-label": "Key color" })
+      ]),
+      keySlider("key-tolerance", "Tolerance", key.tolerance),
+      keySlider("key-softness", "Edge softness", key.softness),
+      keySlider("key-feather", "Feather", key.feather),
+      el("label", { class: "switch-row" }, [
+        el("span", {}, [
+          el("strong", { text: "Halo cleanup" }),
+          el("small", { text: "After the key, Remove Color Matting un-premultiplies the key color. It does not build the matte." })
+        ]),
+        el("input", { type: "checkbox", id: "key-halo", checked: key.halo ? "checked" : null, "aria-label": "Halo cleanup" })
+      ]),
+      el("div", { class: "tool-row" }, [
+        button("check-key", "Check layer", { disabled: state.busy ? "disabled" : null }),
+        button("remove-background", "Remove background", { class: "primary", disabled: state.busy ? "disabled" : null }),
+        button("toggle-checker", key.checker ? "Hide checkerboard" : "Show checkerboard", { disabled: state.busy ? "disabled" : null })
+      ]),
+      el("p", { class: "muted", text: "Show checkerboard adds a guide layer under the selection. Guide layers stay visible in this composition and are not rendered." }),
+      key.report ? el("p", { class: "muted", id: "key-report", text: key.report }) : null,
+      preview
+    ]);
+  }
+
   function renderTools(state) {
     var fields = compositionFields(state);
     var meta = el("p", { class: "muted", id: "tool-comp-meta", text: fields.meta });
@@ -619,6 +717,7 @@
         ]),
         el("p", { class: "muted", text: "New layers match the selected layer’s size and timing." })
       ]),
+      renderKeyTool(state),
       el("section", { class: "block" }, [
         el("div", { class: "block-head" }, [el("h2", { text: "Library" })]),
         el("div", { class: "tool-row" }, [
@@ -891,6 +990,6 @@
     mount: mount,
     render: render,
     renderHost: renderHost,
-    clearPreviewCache: function () { previewCache = {}; mtimeCache = {}; }
+    clearPreviewCache: function () { previewCache = {}; mtimeCache = {}; keyFrameCache = { id: "", url: "" }; }
   };
 })(typeof window !== "undefined" ? window : global);
